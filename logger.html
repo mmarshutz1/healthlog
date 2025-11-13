@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Liquid Macros</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#1a1a2e" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
+    <script
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+      crossorigin
+    ></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Recharts -->
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+    <style>
+      /* Base Styling */
+      body {
+        background-color: #000;
+        color: #e0e0e0;
+        font-family: "Inter", sans-serif;
+        overscroll-behavior: none;
+        height: 100vh;
+        width: 100vw;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      @media (min-width: 640px) {
+        body {
+          align-items: center;
+          background: #111;
+        }
+      }
+
+      /* The App Container */
+      #app-frame {
+        width: 100%;
+        height: 100%;
+        max-width: 480px;
+        max-height: 100%;
+        background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+      }
+
+      @media (min-width: 640px) {
+        #app-frame {
+          height: 90vh;
+          max-height: 900px;
+          border-radius: 24px;
+          border: 1px solid #333;
+        }
+      }
+
+      /* Glassmorphism */
+      .glass-card {
+        background: rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+        border-radius: 16px;
+      }
+
+      .glass-input {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(4px);
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .text-protein {
+        color: #60a5fa;
+      }
+      .text-fats {
+        color: #facc15;
+      }
+      .text-carbs {
+        color: #4ade80;
+      }
+
+      .safe-pt {
+        padding-top: env(safe-area-inset-top, 24px);
+      }
+      .safe-pb {
+        padding-bottom: env(safe-area-inset-bottom, 24px);
+      }
+
+      /* Animation for modal */
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .modal-enter {
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" style="width: 100%; height: 100%"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useMemo } = React;
+      const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } =
+        window.Recharts;
+
+      // --- Icons ---
+      const IconBase = ({ children, size = 24, className = "" }) => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          {children}
+        </svg>
+      );
+      const HomeIcon = (p) => (
+        <IconBase {...p}>
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </IconBase>
+      );
+      const ScaleIcon = (p) => (
+        <IconBase {...p}>
+          <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+          <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+          <path d="M7 21h10" />
+          <path d="M12 3v18" />
+          <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
+        </IconBase>
+      );
+      const UtensilsIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+          <path d="M7 2v20" />
+          <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+        </IconBase>
+      );
+      const SettingsIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+          <circle cx="12" cy="12" r="3" />
+        </IconBase>
+      );
+      const PlusIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M5 12h14" />
+          <path d="M12 5v14" />
+        </IconBase>
+      );
+      const ActivityIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </IconBase>
+      );
+      const TrashIcon = (p) => (
+        <IconBase {...p}>
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </IconBase>
+      );
+      const EditIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+        </IconBase>
+      );
+      const XIcon = (p) => (
+        <IconBase {...p}>
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </IconBase>
+      );
+      const EyeIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </IconBase>
+      );
+      const EyeOffIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </IconBase>
+      );
+      const SaveIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </IconBase>
+      );
+
+      // --- LocalStorage ---
+      const DB = {
+        KEY_LOGS: "liquid_macros_logs_v2",
+        KEY_CONFIG: "liquid_macros_config_v2",
+        KEY_FOODS: "liquid_macros_foods_v1",
+
+        getLogs: () => {
+          try {
+            return JSON.parse(localStorage.getItem(DB.KEY_LOGS)) || {};
+          } catch {
+            return {};
+          }
+        },
+        getConfig: () => {
+          try {
+            return (
+              JSON.parse(localStorage.getItem(DB.KEY_CONFIG)) || {
+                goals: { protein: 260, fats: 135, carbs: 303 },
+                name: "User",
+              }
+            );
+          } catch {
+            return {
+              goals: { protein: 260, fats: 135, carbs: 303 },
+              name: "User",
+            };
+          }
+        },
+        getFoods: () => {
+          try {
+            const stored = JSON.parse(localStorage.getItem(DB.KEY_FOODS));
+            if (stored) return stored;
+            // Defaults
+            return [
+              {
+                id: 1,
+                name: "Egg",
+                icon: "🥚",
+                p: 6,
+                f: 5,
+                c: 0.6,
+                active: true,
+              },
+              {
+                id: 2,
+                name: "McChicken",
+                icon: "🍔",
+                p: 14,
+                f: 21,
+                c: 38,
+                active: true,
+              },
+              {
+                id: 3,
+                name: "Rice",
+                icon: "🍚",
+                p: 4.3,
+                f: 0.4,
+                c: 44,
+                active: true,
+              },
+              {
+                id: 4,
+                name: "Avocado",
+                icon: "🥑",
+                p: 2,
+                f: 15,
+                c: 9,
+                active: true,
+              },
+              {
+                id: 5,
+                name: "Shake",
+                icon: "🥤",
+                p: 7,
+                f: 9,
+                c: 32,
+                active: true,
+              },
+              {
+                id: 6,
+                name: "Banana",
+                icon: "🍌",
+                p: 1.3,
+                f: 0.4,
+                c: 27,
+                active: true,
+              },
+            ];
+          } catch {
+            return [];
+          }
+        },
+
+        saveLog: (date, data) => {
+          const logs = DB.getLogs();
+          logs[date] = {
+            ...(logs[date] || {
+              protein: 0,
+              fats: 0,
+              carbs: 0,
+              weight: "",
+              entries: [],
+            }),
+            ...data,
+          };
+          localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
+          return logs[date];
+        },
+        saveConfig: (newConfig) => {
+          const cfg = { ...DB.getConfig(), ...newConfig };
+          localStorage.setItem(DB.KEY_CONFIG, JSON.stringify(cfg));
+          return cfg;
+        },
+        saveFoods: (foods) => {
+          localStorage.setItem(DB.KEY_FOODS, JSON.stringify(foods));
+          return foods;
+        },
+
+        resetLog: (date) => {
+          const logs = DB.getLogs();
+          if (logs[date]) {
+            delete logs[date];
+            localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
+          }
+          return { protein: 0, fats: 0, carbs: 0, weight: "", entries: [] };
+        },
+      };
+
+      // --- Components ---
+
+      const SimpleGauge = ({
+        label,
+        current,
+        max,
+        colorClass,
+        unit,
+        fromColor,
+        toColor,
+      }) => {
+        const percentage = Math.min(100, Math.max(0, (current / max) * 100));
+        return (
+          <div className="flex flex-col items-center w-full">
+            <div className="relative w-full aspect-[1/2] max-h-48 glass-card p-0 mb-3 overflow-hidden flex items-end rounded-2xl bg-white/5">
+              <div className="absolute inset-0 bg-white/5"></div>
+              <div
+                className="absolute bottom-0 left-0 w-full transition-all duration-700 ease-out"
+                style={{
+                  height: `${percentage}%`,
+                  background: `linear-gradient(to top, ${fromColor}, ${toColor})`,
+                }}
+              >
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-white/50"></div>
+              </div>
+              <div className="relative z-10 w-full pb-3 text-center pointer-events-none">
+                <span className="font-bold text-xl text-white drop-shadow-md">
+                  {Math.round(percentage)}%
+                </span>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className={`font-bold text-sm ${colorClass}`}>{label}</p>
+              <p className="text-[10px] text-zinc-400">
+                {Math.round(current)}/{max}
+                {unit}
+              </p>
+            </div>
+          </div>
+        );
+      };
+
+      const FoodManager = ({ isOpen, onClose, foods, onSaveFoods }) => {
+        const [localFoods, setLocalFoods] = useState(foods);
+        const [editingId, setEditingId] = useState(null);
+        const [newFood, setNewFood] = useState({
+          name: "",
+          icon: "",
+          p: "",
+          f: "",
+          c: "",
+        });
+
+        useEffect(() => {
+          if (isOpen) setLocalFoods(foods);
+        }, [isOpen, foods]);
+
+        if (!isOpen) return null;
+
+        const handleToggleActive = (id) => {
+          const updated = localFoods.map((f) =>
+            f.id === id ? { ...f, active: !f.active } : f
+          );
+          setLocalFoods(updated);
+          onSaveFoods(updated);
+        };
+
+        const handleDelete = (id) => {
+          if (confirm("Delete this food completely?")) {
+            const updated = localFoods.filter((f) => f.id !== id);
+            setLocalFoods(updated);
+            onSaveFoods(updated);
+          }
+        };
+
+        const handleAdd = () => {
+          if (!newFood.name) return;
+          const item = {
+            id: Date.now(),
+            name: newFood.name,
+            icon: newFood.icon || "🍽️",
+            p: parseFloat(newFood.p) || 0,
+            f: parseFloat(newFood.f) || 0,
+            c: parseFloat(newFood.c) || 0,
+            active: true,
+          };
+          const updated = [...localFoods, item];
+          setLocalFoods(updated);
+          onSaveFoods(updated);
+          setNewFood({ name: "", icon: "", p: "", f: "", c: "" });
+        };
+
+        const handleEditSave = (id, updatedFields) => {
+          const updated = localFoods.map((f) =>
+            f.id === id ? { ...f, ...updatedFields } : f
+          );
+          setLocalFoods(updated);
+          onSaveFoods(updated);
+          setEditingId(null);
+        };
+
+        return (
+          <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
+            <div className="bg-[#16213e] w-full h-full sm:h-[90%] sm:w-[90%] sm:rounded-2xl rounded-none flex flex-col modal-enter border border-white/10 shadow-2xl">
+              {/* Header */}
+              <div className="flex justify-between items-center p-6 border-b border-white/5 safe-pt">
+                <h2 className="text-xl font-bold text-white">Food Library</h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 bg-white/10 rounded-full hover:bg-white/20"
+                >
+                  <XIcon />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar pb-20">
+                {/* Add New */}
+                <div className="glass-card p-4 bg-indigo-500/10 border-indigo-500/30">
+                  <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-3">
+                    Create New Food
+                  </h3>
+                  <div className="grid grid-cols-5 gap-2 mb-3">
+                    <input
+                      placeholder="Name"
+                      value={newFood.name}
+                      onChange={(e) =>
+                        setNewFood({ ...newFood, name: e.target.value })
+                      }
+                      className="col-span-3 glass-input p-2 rounded-lg text-white text-sm outline-none"
+                    />
+                    <input
+                      placeholder="Emoji"
+                      value={newFood.icon}
+                      onChange={(e) =>
+                        setNewFood({ ...newFood, icon: e.target.value })
+                      }
+                      className="col-span-2 glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <input
+                      type="number"
+                      placeholder="Prot"
+                      value={newFood.p}
+                      onChange={(e) =>
+                        setNewFood({ ...newFood, p: e.target.value })
+                      }
+                      className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Fats"
+                      value={newFood.f}
+                      onChange={(e) =>
+                        setNewFood({ ...newFood, f: e.target.value })
+                      }
+                      className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Carbs"
+                      value={newFood.c}
+                      onChange={(e) =>
+                        setNewFood({ ...newFood, c: e.target.value })
+                      }
+                      className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAdd}
+                    className="w-full py-3 bg-indigo-600 rounded-xl text-white font-bold shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2"
+                  >
+                    <PlusIcon size={18} /> Add to Library
+                  </button>
+                </div>
+
+                {/* List */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                    Your Library
+                  </h3>
+                  {localFoods.map((food) => (
+                    <div
+                      key={food.id}
+                      className={`flex flex-col bg-white/5 rounded-xl p-3 border ${
+                        food.active
+                          ? "border-green-500/30"
+                          : "border-white/5 opacity-70"
+                      }`}
+                    >
+                      {editingId === food.id ? (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              defaultValue={food.name}
+                              id={`edit-name-${food.id}`}
+                              className="flex-1 bg-black/40 p-2 rounded text-white text-sm"
+                            />
+                            <input
+                              defaultValue={food.icon}
+                              id={`edit-icon-${food.id}`}
+                              className="w-12 bg-black/40 p-2 rounded text-white text-center text-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              defaultValue={food.p}
+                              id={`edit-p-${food.id}`}
+                              className="w-1/3 bg-black/40 p-2 rounded text-white text-sm"
+                              placeholder="P"
+                            />
+                            <input
+                              type="number"
+                              defaultValue={food.f}
+                              id={`edit-f-${food.id}`}
+                              className="w-1/3 bg-black/40 p-2 rounded text-white text-sm"
+                              placeholder="F"
+                            />
+                            <input
+                              type="number"
+                              defaultValue={food.c}
+                              id={`edit-c-${food.id}`}
+                              className="w-1/3 bg-black/40 p-2 rounded text-white text-sm"
+                              placeholder="C"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => {
+                                handleEditSave(food.id, {
+                                  name: document.getElementById(
+                                    `edit-name-${food.id}`
+                                  ).value,
+                                  icon: document.getElementById(
+                                    `edit-icon-${food.id}`
+                                  ).value,
+                                  p:
+                                    parseFloat(
+                                      document.getElementById(
+                                        `edit-p-${food.id}`
+                                      ).value
+                                    ) || 0,
+                                  f:
+                                    parseFloat(
+                                      document.getElementById(
+                                        `edit-f-${food.id}`
+                                      ).value
+                                    ) || 0,
+                                  c:
+                                    parseFloat(
+                                      document.getElementById(
+                                        `edit-c-${food.id}`
+                                      ).value
+                                    ) || 0,
+                                });
+                              }}
+                              className="flex-1 bg-green-600/80 py-2 rounded text-white text-xs font-bold"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="flex-1 bg-white/10 py-2 rounded text-white text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{food.icon}</span>
+                            <div>
+                              <p className="text-sm font-bold text-white">
+                                {food.name}
+                              </p>
+                              <p className="text-[10px] text-zinc-400 flex gap-2">
+                                <span className="text-protein">
+                                  {Math.round(food.p)}p
+                                </span>
+                                <span className="text-fats">
+                                  {Math.round(food.f)}f
+                                </span>
+                                <span className="text-carbs">
+                                  {Math.round(food.c)}c
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditingId(food.id)}
+                              className="p-2 text-zinc-400 hover:text-white"
+                            >
+                              <EditIcon size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleToggleActive(food.id)}
+                              className={`p-2 rounded-lg ${
+                                food.active
+                                  ? "text-green-400 bg-green-400/10"
+                                  : "text-zinc-600 bg-zinc-800"
+                              }`}
+                            >
+                              {food.active ? (
+                                <EyeIcon size={18} />
+                              ) : (
+                                <EyeOffIcon size={18} />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(food.id)}
+                              className="p-2 text-zinc-600 hover:text-red-400"
+                            >
+                              <TrashIcon size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const Macros = ({
+        todayLog,
+        goals,
+        onUpdate,
+        foods,
+        onUpdateFoods,
+        onOpenManager,
+      }) => {
+        const [addAmount, setAddAmount] = useState("");
+        const [selectedMacro, setSelectedMacro] = useState("protein");
+        const entries = todayLog.entries || [];
+
+        // Filter active foods for the grid
+        const activeFoods = foods.filter((f) => f.active);
+
+        const handleAddManual = () => {
+          if (!addAmount) return;
+          const val = parseFloat(addAmount);
+          const currentVal = todayLog[selectedMacro] || 0;
+
+          const newEntry = {
+            id: Date.now(),
+            name: `Manual (${selectedMacro})`,
+            p: selectedMacro === "protein" ? val : 0,
+            f: selectedMacro === "fats" ? val : 0,
+            c: selectedMacro === "carbs" ? val : 0,
+          };
+
+          onUpdate({
+            [selectedMacro]: currentVal + val,
+            entries: [newEntry, ...entries],
+          });
+          setAddAmount("");
+        };
+
+        const handleAddFood = (food) => {
+          const newEntry = {
+            id: Date.now(),
+            name: food.name,
+            p: food.p,
+            f: food.f,
+            c: food.c,
+            icon: food.icon,
+          };
+
+          onUpdate({
+            protein: (todayLog.protein || 0) + food.p,
+            fats: (todayLog.fats || 0) + food.f,
+            carbs: (todayLog.carbs || 0) + food.c,
+            entries: [newEntry, ...entries],
+          });
+        };
+
+        const handleDeleteEntry = (entry) => {
+          if (!confirm("Delete this entry?")) return;
+          const newEntries = entries.filter((e) => e.id !== entry.id);
+          onUpdate({
+            protein: Math.max(0, (todayLog.protein || 0) - entry.p),
+            fats: Math.max(0, (todayLog.fats || 0) - entry.f),
+            carbs: Math.max(0, (todayLog.carbs || 0) - entry.c),
+            entries: newEntries,
+          });
+        };
+
+        return (
+          <div className="flex flex-col space-y-6">
+            <h1 className="text-2xl font-bold text-white">Daily Fuel</h1>
+
+            {/* Gauges */}
+            <div className="grid grid-cols-3 gap-4">
+              <SimpleGauge
+                label="Protein"
+                current={todayLog.protein || 0}
+                max={goals.protein}
+                colorClass="text-protein"
+                unit="g"
+                fromColor="#1e3a8a"
+                toColor="#3b82f6"
+              />
+              <SimpleGauge
+                label="Fats"
+                current={todayLog.fats || 0}
+                max={goals.fats}
+                colorClass="text-fats"
+                unit="g"
+                fromColor="#713f12"
+                toColor="#eab308"
+              />
+              <SimpleGauge
+                label="Carbs"
+                current={todayLog.carbs || 0}
+                max={goals.carbs}
+                colorClass="text-carbs"
+                unit="g"
+                fromColor="#14532d"
+                toColor="#22c55e"
+              />
+            </div>
+
+            {/* Manual Input */}
+            <div className="glass-card p-4">
+              <h3 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-widest">
+                Manual Add
+              </h3>
+              <div className="flex gap-2">
+                <div className="flex p-1 bg-black/30 rounded-xl flex-1">
+                  {["protein", "fats", "carbs"].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setSelectedMacro(m)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
+                        selectedMacro === m
+                          ? "bg-indigo-600 text-white shadow-lg"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      {m.charAt(0).toUpperCase() + m.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0"
+                  className="glass-input w-20 px-2 py-2 text-lg text-center text-white rounded-xl focus:outline-none focus:border-indigo-500 transition-all placeholder-zinc-600"
+                  value={addAmount}
+                  onChange={(e) => setAddAmount(e.target.value)}
+                />
+                <button
+                  onClick={handleAddManual}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                >
+                  <PlusIcon size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Foods Grid */}
+            <div className="glass-card p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                  Quick Foods
+                </h3>
+                <button
+                  onClick={onOpenManager}
+                  className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
+                >
+                  <EditIcon size={12} /> Edit List
+                </button>
+              </div>
+
+              {activeFoods.length === 0 ? (
+                <div className="text-center py-8 text-zinc-500 text-sm">
+                  No active foods. Click "Edit List" to add some!
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {activeFoods.map((food) => (
+                    <button
+                      key={food.id}
+                      onClick={() => handleAddFood(food)}
+                      className="glass-card bg-white/5 hover:bg-white/10 active:scale-95 transition-all p-3 flex flex-col items-center justify-center gap-1 border-0"
+                    >
+                      <span className="text-2xl">{food.icon}</span>
+                      <span className="text-xs font-medium text-zinc-300 truncate w-full text-center">
+                        {food.name}
+                      </span>
+                      <div className="flex gap-1 text-[9px] opacity-60">
+                        <span className="text-protein">
+                          {Math.round(food.p)}p
+                        </span>
+                        <span className="text-fats">{Math.round(food.f)}f</span>
+                        <span className="text-carbs">
+                          {Math.round(food.c)}c
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* History List */}
+            {entries.length > 0 && (
+              <div className="glass-card p-5">
+                <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">
+                  Today's Log
+                </h3>
+                <div className="space-y-3 max-h-60 overflow-y-auto no-scrollbar">
+                  {entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between bg-white/5 rounded-lg p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{entry.icon || "✏️"}</span>
+                        <div>
+                          <p className="text-sm font-bold text-white">
+                            {entry.name}
+                          </p>
+                          <p className="text-[10px] text-zinc-400 flex gap-2">
+                            {entry.p > 0 && (
+                              <span className="text-protein">
+                                {Math.round(entry.p)}p
+                              </span>
+                            )}
+                            {entry.f > 0 && (
+                              <span className="text-fats">
+                                {Math.round(entry.f)}f
+                              </span>
+                            )}
+                            {entry.c > 0 && (
+                              <span className="text-carbs">
+                                {Math.round(entry.c)}c
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteEntry(entry)}
+                        className="text-zinc-500 hover:text-red-400 p-2 transition-colors"
+                      >
+                        <TrashIcon size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ... [Overview, WeightLog, Profile components remain largely the same] ...
+      const Overview = ({ history, user }) => {
+        const chartData = useMemo(() => {
+          if (!history || history.length === 0) return [];
+          return [...history]
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .slice(-7)
+            .map((log) => ({
+              name: new Date(log.date).toLocaleDateString("en-US", {
+                weekday: "short",
+              }),
+              weight: log.weight || null,
+            }));
+        }, [history]);
+
+        const latestWeight =
+          history.length > 0 ? history[history.length - 1].weight : "--";
+        const startWeight = history.length > 0 ? history[0].weight : "--";
+
+        return (
+          <div className="flex flex-col space-y-6 animate-fade-in">
+            <header>
+              <h1 className="text-3xl font-bold text-white">
+                Hello, {user?.name || "User"}
+              </h1>
+              <p className="text-sm text-zinc-400">
+                Here is your current status.
+              </p>
+            </header>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-1 text-blue-400">
+                  <ScaleIcon size={16} />
+                  <span className="text-xs uppercase tracking-wider font-bold">
+                    Current
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {latestWeight}{" "}
+                  <span className="text-sm text-zinc-400 font-normal">lbs</span>
+                </p>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-1 text-green-400">
+                  <ActivityIcon size={16} />
+                  <span className="text-xs uppercase tracking-wider font-bold">
+                    Start
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {startWeight}{" "}
+                  <span className="text-sm text-zinc-400 font-normal">lbs</span>
+                </p>
+              </div>
+            </div>
+            <div className="glass-card p-4 h-72 flex flex-col">
+              <h3 className="text-xs font-medium text-zinc-400 mb-4 uppercase tracking-wider">
+                Weight Trend
+              </h3>
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <XAxis
+                      dataKey="name"
+                      stroke="#64748b"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      domain={["auto", "auto"]}
+                      stroke="#64748b"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      width={30}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(26, 26, 46, 0.9)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "8px",
+                      }}
+                      itemStyle={{ color: "#fff", fontSize: "12px" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="weight"
+                      stroke="#60A5FA"
+                      strokeWidth={3}
+                      dot={{
+                        r: 4,
+                        fill: "#1a1a2e",
+                        stroke: "#60A5FA",
+                        strokeWidth: 2,
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        );
+      };
+      const WeightLog = ({ todayLog, onUpdate }) => {
+        const [weight, setWeight] = useState(todayLog.weight || "");
+        const handleSave = (e) => {
+          e.preventDefault();
+          onUpdate({ weight: parseFloat(weight) });
+        };
+        return (
+          <div className="flex flex-col items-center justify-center h-full pb-20">
+            <div className="w-full glass-card p-8 flex flex-col items-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+              <h2 className="text-2xl font-bold mb-8 text-white">Log Weight</h2>
+              <form
+                onSubmit={handleSave}
+                className="flex flex-col w-full gap-8"
+              >
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    inputMode="decimal"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="w-full bg-transparent text-6xl font-bold text-center text-white border-b-2 border-zinc-700 focus:border-indigo-500 focus:outline-none pb-4 transition-colors placeholder-zinc-700"
+                    placeholder="0.0"
+                  />
+                  <span className="absolute bottom-6 right-4 text-zinc-500 text-xl">
+                    lbs
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg"
+                >
+                  Save
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      };
+      const Profile = ({
+        goals,
+        user,
+        onUpdateGoals,
+        onUpdateName,
+        onResetToday,
+      }) => {
+        const [localGoals, setLocalGoals] = useState(goals);
+        const [name, setName] = useState(user?.name || "User");
+        const handleGoalChange = (key, val) =>
+          setLocalGoals((prev) => ({ ...prev, [key]: parseInt(val) || 0 }));
+        const handleSave = () => {
+          onUpdateGoals(localGoals);
+          onUpdateName(name);
+          alert("Saved");
+        };
+        const handleResetToday = () => {
+          if (
+            confirm(
+              "Are you sure you want to clear TODAY'S log? This will reset macros and weight for today only."
+            )
+          ) {
+            onResetToday();
+          }
+        };
+        const handleResetAll = () => {
+          if (
+            confirm(
+              "WARNING: This will wipe ALL history and settings. Are you sure?"
+            )
+          ) {
+            localStorage.clear();
+            window.location.reload();
+          }
+        };
+        return (
+          <div className="space-y-6 pb-8">
+            <header>
+              <h1 className="text-3xl font-bold text-white">Settings</h1>
+            </header>
+            <div className="space-y-4">
+              <div className="glass-card p-5">
+                <label className="block text-xs text-zinc-400 mb-2 uppercase tracking-wider font-bold">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="glass-input w-full rounded-xl p-3 text-white focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div className="glass-card p-5">
+                <h3 className="text-xs text-zinc-400 mb-5 uppercase tracking-wider font-bold border-b border-zinc-700/50 pb-3">
+                  Macro Targets
+                </h3>
+                <div className="space-y-5">
+                  {["protein", "fats", "carbs"].map((g) => (
+                    <div key={g} className="flex items-center justify-between">
+                      <label
+                        className={`capitalize text-base font-medium ${
+                          g === "protein"
+                            ? "text-protein"
+                            : g === "fats"
+                            ? "text-fats"
+                            : "text-carbs"
+                        }`}
+                      >
+                        {g}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={localGoals[g]}
+                          onChange={(e) => handleGoalChange(g, e.target.value)}
+                          className="glass-input rounded-lg p-2 w-24 text-right text-white focus:border-indigo-500 focus:outline-none text-base"
+                        />
+                        <span className="text-zinc-500 text-sm w-4">g</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleSave}
+              className="w-full bg-white text-black font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg"
+            >
+              Save Changes
+            </button>
+            <div className="pt-4 border-t border-zinc-800 mt-8 space-y-3">
+              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                Data Management
+              </h3>
+              <button
+                onClick={handleResetToday}
+                className="w-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-bold py-3 rounded-xl hover:bg-yellow-500/20 transition-all text-sm"
+              >
+                Clear Today's Log
+              </button>
+              <button
+                onClick={handleResetAll}
+                className="w-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-3 rounded-xl hover:bg-red-500/20 transition-all text-sm"
+              >
+                Factory Reset (Erase All)
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [view, setView] = useState("overview");
+        const [loading, setLoading] = useState(true);
+        const [user, setUser] = useState(null);
+        const [goals, setGoals] = useState({
+          protein: 260,
+          fats: 135,
+          carbs: 303,
+        });
+        const [todayLog, setTodayLog] = useState({
+          protein: 0,
+          fats: 0,
+          carbs: 0,
+          weight: "",
+        });
+        const [history, setHistory] = useState([]);
+        const [foods, setFoods] = useState([]);
+        const [isManagerOpen, setIsManagerOpen] = useState(false);
+
+        const getTodayStr = () => new Date().toISOString().split("T")[0];
+
+        useEffect(() => {
+          const loadData = () => {
+            const conf = DB.getConfig();
+            setGoals(conf.goals);
+            setUser({ name: conf.name });
+
+            const allLogsMap = DB.getLogs();
+            const logsArray = Object.entries(allLogsMap).map(
+              ([date, data]) => ({ date, ...data })
+            );
+            setHistory(logsArray);
+
+            const today = getTodayStr();
+            setTodayLog(
+              allLogsMap[today] || {
+                protein: 0,
+                fats: 0,
+                carbs: 0,
+                weight: "",
+                entries: [],
+              }
+            );
+
+            const loadedFoods = DB.getFoods();
+            setFoods(loadedFoods);
+
+            setLoading(false);
+          };
+          loadData();
+        }, []);
+
+        const updateTodayLog = (newData) => {
+          const today = getTodayStr();
+          const updatedLog = DB.saveLog(today, newData);
+          setTodayLog(updatedLog);
+          const allLogsMap = DB.getLogs();
+          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({
+            date,
+            ...data,
+          }));
+          setHistory(logsArray);
+        };
+
+        const updateFoods = (newFoods) => {
+          const saved = DB.saveFoods(newFoods);
+          setFoods(saved);
+        };
+
+        const resetToday = () => {
+          const today = getTodayStr();
+          const newLog = DB.resetLog(today);
+          setTodayLog(newLog);
+          const allLogsMap = DB.getLogs();
+          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({
+            date,
+            ...data,
+          }));
+          setHistory(logsArray);
+        };
+
+        const updateGoals = (newGoals) => {
+          const updated = DB.saveConfig({ goals: newGoals });
+          setGoals(updated.goals);
+        };
+        const updateName = (newName) => {
+          const updated = DB.saveConfig({ name: newName });
+          setUser({ name: updated.name });
+        };
+
+        if (loading)
+          return (
+            <div className="h-full w-full flex items-center justify-center text-zinc-400">
+              Loading...
+            </div>
+          );
+
+        const renderView = () => {
+          switch (view) {
+            case "overview":
+              return <Overview history={history} user={user} />;
+            case "macros":
+              return (
+                <Macros
+                  todayLog={todayLog}
+                  goals={goals}
+                  onUpdate={updateTodayLog}
+                  foods={foods}
+                  onUpdateFoods={updateFoods}
+                  onOpenManager={() => setIsManagerOpen(true)}
+                />
+              );
+            case "weight":
+              return (
+                <WeightLog todayLog={todayLog} onUpdate={updateTodayLog} />
+              );
+            case "profile":
+              return (
+                <Profile
+                  goals={goals}
+                  user={user}
+                  onUpdateGoals={updateGoals}
+                  onUpdateName={updateName}
+                  onResetToday={resetToday}
+                />
+              );
+            default:
+              return <Overview history={history} user={user} />;
+          }
+        };
+
+        return (
+          <div id="app-frame">
+            <div className="flex justify-between items-center px-6 pt-6 pb-4 z-50 shrink-0 safe-pt">
+              <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </div>
+              <button
+                onClick={() => setView("profile")}
+                className="glass-card p-2 rounded-full hover:bg-white/10 active:scale-95 transition-all text-blue-300"
+              >
+                <SettingsIcon size={18} />
+              </button>
+            </div>
+
+            {/* Added overflow-y-auto and padding bottom for scrolling support on small screens */}
+            <main className="flex-1 overflow-y-auto no-scrollbar px-5 pb-32 z-40 relative w-full">
+              {renderView()}
+            </main>
+
+            <nav className="absolute bottom-6 left-5 right-5 glass-card p-2 flex justify-around items-center z-50 shadow-2xl safe-pb">
+              <button
+                onClick={() => setView("overview")}
+                className={`p-3 rounded-xl transition-all ${
+                  view === "overview"
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <HomeIcon size={24} />
+              </button>
+              <button
+                onClick={() => setView("macros")}
+                className={`p-3 rounded-xl transition-all ${
+                  view === "macros"
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <UtensilsIcon size={24} />
+              </button>
+              <button
+                onClick={() => setView("weight")}
+                className={`p-3 rounded-xl transition-all ${
+                  view === "weight"
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <ScaleIcon size={24} />
+              </button>
+            </nav>
+
+            <FoodManager
+              isOpen={isManagerOpen}
+              onClose={() => setIsManagerOpen(false)}
+              foods={foods}
+              onSaveFoods={updateFoods}
+            />
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
