@@ -240,6 +240,29 @@
         </IconBase>
       );
 
+      // NEW ICONS
+      const CheckIcon = (p) => (
+        <IconBase {...p}>
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </IconBase>
+      );
+
+      const CheckCircleIcon = (p) => (
+        <IconBase {...p}>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </IconBase>
+      );
+
+      const SearchIcon = (p) => (
+        <IconBase {...p}>
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </IconBase>
+      );
+
+      // --- END NEW ICONS ---
+
       // --- LocalStorage ---
       const DB = {
         KEY_LOGS: "liquid_macros_logs_v2",
@@ -336,16 +359,17 @@
 
         saveLog: (date, data) => {
           const logs = DB.getLogs();
-          logs[date] = {
-            ...(logs[date] || {
-              protein: 0,
-              fats: 0,
-              carbs: 0,
-              weight: "",
-              entries: [],
-            }),
-            ...data,
+          // UPDATED: Add default structure including dailyTasks
+          const defaultLog = {
+            protein: 0,
+            fats: 0,
+            carbs: 0,
+            weight: "",
+            entries: [],
+            dailyTasks: DEFAULT_DAILY_TASKS,
           };
+          const existingLog = { ...defaultLog, ...(logs[date] || {}) };
+          logs[date] = { ...existingLog, ...data };
           localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
           return logs[date];
         },
@@ -365,11 +389,71 @@
             delete logs[date];
             localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
           }
-          return { protein: 0, fats: 0, carbs: 0, weight: "", entries: [] };
+          // UPDATED: Return default structure including dailyTasks
+          return {
+            protein: 0,
+            fats: 0,
+            carbs: 0,
+            weight: "",
+            entries: [],
+            dailyTasks: DEFAULT_DAILY_TASKS,
+          };
         },
       };
 
       // --- Components ---
+
+      // Global const for default tasks
+      const DEFAULT_DAILY_TASKS = {
+        creatine: false,
+        vitaminD: false,
+        fishOil: false,
+        whey: false,
+      };
+
+      // Task list definition
+      const TASKS_CONFIG = [
+        { key: "creatine", name: "Creatine" },
+        { key: "vitaminD", name: "Vitamin D" },
+        { key: "fishOil", name: "Fish Oil" },
+        { key: "whey", name: "Whey Protein" },
+      ];
+
+      // --- NEW Modal Component ---
+      const Modal = ({
+        isOpen,
+        onClose,
+        onConfirm,
+        title,
+        message,
+        showCancel = true,
+      }) => {
+        if (!isOpen) return null;
+        return (
+          <div className="absolute inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="glass-card bg-[#1a1a2e] p-6 rounded-2xl w-full max-w-sm border-indigo-500/30 modal-enter">
+              <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
+              <p className="text-zinc-300 text-sm mb-6">{message}</p>
+              <div className="flex gap-3">
+                {showCancel && (
+                  <button
+                    onClick={onClose}
+                    className="flex-1 bg-white/10 text-white py-3 rounded-xl font-medium"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  onClick={onConfirm}
+                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold"
+                >
+                  {showCancel ? "Confirm" : "OK"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
 
       const SimpleGauge = ({
         label,
@@ -411,7 +495,13 @@
         );
       };
 
-      const FoodManager = ({ isOpen, onClose, foods, onSaveFoods }) => {
+      const FoodManager = ({
+        isOpen,
+        onClose,
+        foods,
+        onSaveFoods,
+        setModal,
+      }) => {
         const [localFoods, setLocalFoods] = useState(foods);
         const [editingId, setEditingId] = useState(null);
         const [newFood, setNewFood] = useState({
@@ -437,11 +527,21 @@
         };
 
         const handleDelete = (id) => {
-          if (confirm("Delete this food completely?")) {
-            const updated = localFoods.filter((f) => f.id !== id);
-            setLocalFoods(updated);
-            onSaveFoods(updated);
-          }
+          const food = localFoods.find((f) => f.id === id);
+          setModal({
+            isOpen: true,
+            title: "Delete Food?",
+            message: `Are you sure you want to delete "${
+              food?.name || "this food"
+            }" from your library?`,
+            onConfirm: () => {
+              const updated = localFoods.filter((f) => f.id !== id);
+              setLocalFoods(updated);
+              onSaveFoods(updated);
+              setModal({ isOpen: false });
+            },
+            showCancel: true,
+          });
         };
 
         const handleAdd = () => {
@@ -699,13 +799,84 @@
         );
       };
 
+      {
+        /* <!--- NEW COMPONENT: Modal for logging hidden foods ---> */
+      }
+      // FIX: Changed JSX comment to JS comment
+      // <!--- NEW COMPONENT: Modal for logging hidden foods --->
+      const LogHiddenFoodModal = ({ isOpen, onClose, foods, onLogFood }) => {
+        if (!isOpen) return null;
+
+        const inactiveFoods = foods
+          .filter((f) => !f.active)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        return (
+          <div className="absolute inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
+            <div className="bg-[#16213e] w-full h-full sm:h-[70%] sm:w-[90%] sm:rounded-2xl rounded-none flex flex-col modal-enter border border-white/10 shadow-2xl">
+              {/* Header */}
+              <div className="flex justify-between items-center p-6 border-b border-white/5 safe-pt">
+                <h2 className="text-xl font-bold text-white">
+                  Log Hidden Food
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 bg-white/10 rounded-full hover:bg-white/20"
+                >
+                  <XIcon />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-3 no-scrollbar pb-20">
+                {inactiveFoods.length === 0 ? (
+                  <p className="text-center text-zinc-500 text-sm py-8">
+                    You have no hidden foods.
+                  </p>
+                ) : (
+                  inactiveFoods.map((food) => (
+                    <button
+                      key={food.id}
+                      onClick={() => onLogFood(food)}
+                      className="w-full flex items-center justify-between bg-white/5 rounded-xl p-3 border border-white/5 hover:bg-white/10"
+                    >
+                      <div className="flex items-center gap-3 text-left">
+                        <span className="text-2xl">{food.icon}</span>
+                        <div>
+                          <p className="text-sm font-bold text-white">
+                            {food.name}
+                          </p>
+                          <p className="text-[10px] text-zinc-400 flex gap-2">
+                            <span className="text-protein">
+                              {Math.round(food.p)}p
+                            </span>
+                            <span className="text-fats">
+                              {Math.round(food.f)}f
+                            </span>
+                            <span className="text-carbs">
+                              {Math.round(food.c)}c
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <PlusIcon size={20} className="text-indigo-400" />
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       const Macros = ({
         todayLog,
         goals,
         onUpdate,
         foods,
-        onUpdateFoods,
         onOpenManager,
+        onOpenLogHidden, // NEW PROP
+        setModal,
       }) => {
         const [addAmount, setAddAmount] = useState("");
         const [selectedMacro, setSelectedMacro] = useState("protein");
@@ -753,19 +924,33 @@
         };
 
         const handleDeleteEntry = (entry) => {
-          if (!confirm("Delete this entry?")) return;
-          const newEntries = entries.filter((e) => e.id !== entry.id);
-          onUpdate({
-            protein: Math.max(0, (todayLog.protein || 0) - entry.p),
-            fats: Math.max(0, (todayLog.fats || 0) - entry.f),
-            carbs: Math.max(0, (todayLog.carbs || 0) - entry.c),
-            entries: newEntries,
+          setModal({
+            isOpen: true,
+            title: "Delete Entry?",
+            message: `Are you sure you want to delete the entry for "${entry.name}"?`,
+            onConfirm: () => {
+              const newEntries = entries.filter((e) => e.id !== entry.id);
+              onUpdate({
+                protein: Math.max(0, (todayLog.protein || 0) - entry.p),
+                fats: Math.max(0, (todayLog.fats || 0) - entry.f),
+                carbs: Math.max(0, (todayLog.carbs || 0) - entry.c),
+                entries: newEntries,
+              });
+              setModal({ isOpen: false });
+            },
+            showCancel: true,
           });
         };
 
         return (
           <div className="flex flex-col space-y-6">
-            <h1 className="text-2xl font-bold text-white">Daily Fuel</h1>
+            {/* <!--- UPDATED HEADER ---> */}
+            <header>
+              <h1 className="text-3xl font-bold text-white">Daily Fuel</h1>
+              <p className="text-sm text-zinc-400">
+                Log your macros for the day.
+              </p>
+            </header>
 
             {/* Gauges */}
             <div className="grid grid-cols-3 gap-4">
@@ -842,12 +1027,21 @@
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
                   Quick Foods
                 </h3>
-                <button
-                  onClick={onOpenManager}
-                  className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
-                >
-                  <EditIcon size={12} /> Edit List
-                </button>
+                {/* UPDATED: Wrapper and new button */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={onOpenLogHidden}
+                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
+                  >
+                    <SearchIcon size={12} /> Log Hidden
+                  </button>
+                  <button
+                    onClick={onOpenManager}
+                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
+                  >
+                    <EditIcon size={12} /> Edit List
+                  </button>
+                </div>
               </div>
 
               {activeFoods.length === 0 ? (
@@ -933,8 +1127,16 @@
         );
       };
 
-      // ... [Overview, WeightLog, Profile components remain largely the same] ...
-      const Overview = ({ history, user }) => {
+      {
+        /* <!--- THIS IS THE CORRECT, FUNCTIONING COMPONENT ---> */
+      }
+      {
+        /* UPDATED Overview Component */
+      }
+      // FIX: Changed JSX comment to JS comment
+      // <!--- THIS IS THE CORRECT, FUNCTIONING COMPONENT --->
+      // UPDATED Overview Component
+      const Overview = ({ history, user, todayLog, onUpdate }) => {
         const chartData = useMemo(() => {
           if (!history || history.length === 0) return [];
           return [...history]
@@ -948,9 +1150,36 @@
             }));
         }, [history]);
 
-        const latestWeight =
-          history.length > 0 ? history[history.length - 1].weight : "--";
-        const startWeight = history.length > 0 ? history[0].weight : "--";
+        {
+          /* BUGFIX: Use safer filter to prevent crash on 0 or empty string */
+        }
+        const latestWeightLog = [...history]
+          .filter(
+            (h) =>
+              h.weight !== null && h.weight !== undefined && h.weight !== ""
+          )
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        const latestWeight = latestWeightLog ? latestWeightLog.weight : "--";
+
+        const startWeightLog = [...history]
+          .filter(
+            (h) =>
+              h.weight !== null && h.weight !== undefined && h.weight !== ""
+          )
+          .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+        const startWeight = startWeightLog ? startWeightLog.weight : "--";
+
+        // Handler for toggling daily tasks
+        const handleToggleTask = (taskName) => {
+          const currentTasks = todayLog.dailyTasks || DEFAULT_DAILY_TASKS;
+          const newTasks = {
+            ...currentTasks,
+            [taskName]: !currentTasks[taskName],
+          };
+          onUpdate({ dailyTasks: newTasks });
+        };
+
+        const currentTasks = todayLog.dailyTasks || DEFAULT_DAILY_TASKS;
 
         return (
           <div className="flex flex-col space-y-6 animate-fade-in">
@@ -962,6 +1191,9 @@
                 Here is your current status.
               </p>
             </header>
+
+            {/* MOVED Daily Checklist FROM HERE */}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="glass-card p-4">
                 <div className="flex items-center gap-2 mb-1 text-blue-400">
@@ -990,7 +1222,7 @@
             </div>
             <div className="glass-card p-4 h-72 flex flex-col">
               <h3 className="text-xs font-medium text-zinc-400 mb-4 uppercase tracking-wider">
-                Weight Trend
+                Weight Trend (Last 7 Days)
               </h3>
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1034,20 +1266,101 @@
                 </ResponsiveContainer>
               </div>
             </div>
+
+            {/* NEW: Daily Checklist (MOVED HERE) */}
+            <div className="glass-card p-5">
+              <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">
+                Daily Checklist
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {TASKS_CONFIG.map((task) => {
+                  const isChecked = currentTasks[task.key];
+                  return (
+                    <button
+                      key={task.key}
+                      onClick={() => handleToggleTask(task.key)}
+                      className={`glass-card p-4 rounded-xl flex items-center justify-between transition-all ${
+                        isChecked
+                          ? "bg-green-500/20 border-green-500/30"
+                          : "bg-white/5 hover:bg-white/10"
+                      }`}
+                    >
+                      <span
+                        className={`text-sm font-medium ${
+                          isChecked ? "text-green-300" : "text-zinc-300"
+                        }`}
+                      >
+                        {task.name}
+                      </span>
+                      {isChecked ? (
+                        <CheckCircleIcon size={20} className="text-green-400" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-zinc-600"></div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* END: Daily Checklist */}
           </div>
         );
       };
-      const WeightLog = ({ todayLog, onUpdate }) => {
+
+      {
+        /* <!--- UPDATED WeightLog Component (BUGFIX & HEADER) ---> */
+      }
+      // FIX: Changed JSX comment to JS comment
+      // <!--- UPDATED WeightLog Component (BUGFIX & HEADER) --->
+      const WeightLog = ({
+        todayLog,
+        onUpdate,
+        history,
+        onDeleteWeightEntry,
+      }) => {
         const [weight, setWeight] = useState(todayLog.weight || "");
+
+        // Update local state if todayLog prop changes (e.g., from an external delete)
+        useEffect(() => {
+          setWeight(todayLog.weight || "");
+        }, [todayLog.weight]);
+
         const handleSave = (e) => {
           e.preventDefault();
-          onUpdate({ weight: parseFloat(weight) });
+          onUpdate({ weight: parseFloat(weight) || "" });
         };
+
+        const weightHistory = useMemo(() => {
+          return (
+            [...history]
+              // BUGFIX: Use safer filter to prevent crash on 0 or empty string
+              .filter(
+                (log) =>
+                  log.weight !== null &&
+                  log.weight !== undefined &&
+                  log.weight !== ""
+              )
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+          );
+        }, [history]);
+
         return (
-          <div className="flex flex-col items-center justify-center h-full pb-20">
+          <div className="flex flex-col items-center justify-start h-full pb-20 space-y-6">
+            {/* <!--- NEW HEADER ---> */}
+            <header className="w-full">
+              <h1 className="text-3xl font-bold text-white">Weight Tracker</h1>
+              <p className="text-sm text-zinc-400">
+                Log today's weight and view your history.
+              </p>
+            </header>
+
+            {/* Log Today's Weight */}
             <div className="w-full glass-card p-8 flex flex-col items-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-              <h2 className="text-2xl font-bold mb-8 text-white">Log Weight</h2>
+              {/* <!--- UPDATED SUB-HEADER ---> */}
+              <h2 className="text-xl font-bold mb-6 text-white">
+                Log Today's Weight
+              </h2>
               <form
                 onSubmit={handleSave}
                 className="flex flex-col w-full gap-8"
@@ -1070,52 +1383,130 @@
                   type="submit"
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg"
                 >
-                  Save
+                  Save Today's Weight
                 </button>
               </form>
+            </div>
+
+            {/* Weight History List */}
+            <div className="w-full glass-card p-5 mt-8">
+              <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">
+                Weight History
+              </h3>
+              <div className="space-y-3 max-h-60 overflow-y-auto no-scrollbar">
+                {weightHistory.length === 0 ? (
+                  <p className="text-center text-zinc-500 text-sm py-4">
+                    No weight history logged.
+                  </p>
+                ) : (
+                  weightHistory.map((log) => (
+                    <div
+                      key={log.date}
+                      className="flex items-center justify-between bg-white/5 rounded-lg p-3"
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {log.weight}{" "}
+                          <span className="text-xs text-zinc-400 font-normal">
+                            lbs
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-zinc-400">
+                          {new Date(log.date).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => onDeleteWeightEntry(log.date)}
+                        className="text-zinc-500 hover:text-red-400 p-2 transition-colors"
+                      >
+                        <TrashIcon size={18} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         );
       };
+
+      {
+        /* <!--- END UPDATED WeightLog Component ---> */
+      }
+      // FIX: Changed JSX comment to JS comment
+      // <!--- END UPDATED WeightLog Component --->
+
+      {
+        /* <!--- UPDATED Profile Component ---> */
+      }
+      // FIX: Changed JSX comment to JS comment
+      // <!--- UPDATED Profile Component --->
       const Profile = ({
         goals,
         user,
         onUpdateGoals,
         onUpdateName,
         onResetToday,
+        setModal,
       }) => {
         const [localGoals, setLocalGoals] = useState(goals);
         const [name, setName] = useState(user?.name || "User");
+
         const handleGoalChange = (key, val) =>
           setLocalGoals((prev) => ({ ...prev, [key]: parseInt(val) || 0 }));
+
         const handleSave = () => {
           onUpdateGoals(localGoals);
           onUpdateName(name);
-          alert("Saved");
+          setModal({
+            isOpen: true,
+            title: "Saved",
+            message: "Your changes have been saved.",
+            onConfirm: () => setModal({ isOpen: false }),
+            showCancel: false,
+          });
         };
+
         const handleResetToday = () => {
-          if (
-            confirm(
-              "Are you sure you want to clear TODAY'S log? This will reset macros and weight for today only."
-            )
-          ) {
-            onResetToday();
-          }
+          setModal({
+            isOpen: true,
+            title: "Clear Today's Log?",
+            message:
+              "This will reset macros and weight for today only. Are you sure?",
+            onConfirm: () => {
+              onResetToday();
+              setModal({ isOpen: false });
+            },
+            showCancel: true,
+          });
         };
+
         const handleResetAll = () => {
-          if (
-            confirm(
-              "WARNING: This will wipe ALL history and settings. Are you sure?"
-            )
-          ) {
-            localStorage.clear();
-            window.location.reload();
-          }
+          setModal({
+            isOpen: true,
+            title: "Factory Reset?",
+            message:
+              "WARNING: This will wipe ALL history, foods, and settings. This cannot be undone.",
+            onConfirm: () => {
+              localStorage.clear();
+              window.location.reload();
+            },
+            showCancel: true,
+          });
         };
+
         return (
           <div className="space-y-6 pb-8">
+            {/* <!--- UPDATED HEADER ---> */}
             <header>
               <h1 className="text-3xl font-bold text-white">Settings</h1>
+              <p className="text-sm text-zinc-400">
+                Manage your goals, data, and preferences.
+              </p>
             </header>
             <div className="space-y-4">
               <div className="glass-card p-5">
@@ -1188,6 +1579,11 @@
         );
       };
 
+      {
+        /* <!--- UPDATED App Component ---> */
+      }
+      // FIX: Changed JSX comment to JS comment
+      // <!--- UPDATED App Component --->
       const App = () => {
         const [view, setView] = useState("overview");
         const [loading, setLoading] = useState(true);
@@ -1202,39 +1598,59 @@
           fats: 0,
           carbs: 0,
           weight: "",
+          entries: [],
+          dailyTasks: DEFAULT_DAILY_TASKS, // UPDATED
         });
         const [history, setHistory] = useState([]);
         const [foods, setFoods] = useState([]);
         const [isManagerOpen, setIsManagerOpen] = useState(false);
+        const [isLogHiddenOpen, setIsLogHiddenOpen] = useState(false); // NEW STATE
+        // Modal state lifted to App
+        const [modalState, setModalState] = useState({
+          isOpen: false,
+          title: "",
+          message: "",
+          onConfirm: () => {},
+          showCancel: false,
+        });
 
         const getTodayStr = () => new Date().toISOString().split("T")[0];
+
+        // Helper to refresh state from DB
+        const refreshStateFromDB = () => {
+          const allLogsMap = DB.getLogs();
+          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({
+            date,
+            ...data,
+          }));
+          setHistory(logsArray);
+
+          const today = getTodayStr();
+          // UPDATED: Ensure dailyTasks exists on load
+          const defaultLog = {
+            protein: 0,
+            fats: 0,
+            carbs: 0,
+            weight: "",
+            entries: [],
+            dailyTasks: DEFAULT_DAILY_TASKS,
+          };
+          const logForToday = allLogsMap[today] || defaultLog;
+          // Ensure new dailyTasks structure is applied to older data
+          if (!logForToday.dailyTasks) {
+            logForToday.dailyTasks = defaultLog.dailyTasks;
+          }
+          setTodayLog(logForToday);
+        };
 
         useEffect(() => {
           const loadData = () => {
             const conf = DB.getConfig();
             setGoals(conf.goals);
             setUser({ name: conf.name });
-
-            const allLogsMap = DB.getLogs();
-            const logsArray = Object.entries(allLogsMap).map(
-              ([date, data]) => ({ date, ...data })
-            );
-            setHistory(logsArray);
-
-            const today = getTodayStr();
-            setTodayLog(
-              allLogsMap[today] || {
-                protein: 0,
-                fats: 0,
-                carbs: 0,
-                weight: "",
-                entries: [],
-              }
-            );
-
+            refreshStateFromDB(); // Use helper
             const loadedFoods = DB.getFoods();
             setFoods(loadedFoods);
-
             setLoading(false);
           };
           loadData();
@@ -1242,14 +1658,28 @@
 
         const updateTodayLog = (newData) => {
           const today = getTodayStr();
-          const updatedLog = DB.saveLog(today, newData);
-          setTodayLog(updatedLog);
-          const allLogsMap = DB.getLogs();
-          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({
-            date,
-            ...data,
-          }));
-          setHistory(logsArray);
+          DB.saveLog(today, newData);
+          refreshStateFromDB(); // Use helper to ensure all state is in sync
+        };
+
+        // NEW: Handler to delete just the weight from a log
+        const deleteWeightEntry = (date) => {
+          setModalState({
+            isOpen: true,
+            title: "Delete Weight Entry?",
+            message: `Are you sure you want to delete the weight entry for ${new Date(
+              date
+            ).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}?`,
+            onConfirm: () => {
+              DB.saveLog(date, { weight: "" }); // Save an empty string for weight
+              refreshStateFromDB(); // Refresh history and todayLog
+              setModalState({ isOpen: false });
+            },
+            showCancel: true,
+          });
         };
 
         const updateFoods = (newFoods) => {
@@ -1259,14 +1689,8 @@
 
         const resetToday = () => {
           const today = getTodayStr();
-          const newLog = DB.resetLog(today);
-          setTodayLog(newLog);
-          const allLogsMap = DB.getLogs();
-          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({
-            date,
-            ...data,
-          }));
-          setHistory(logsArray);
+          DB.resetLog(today);
+          refreshStateFromDB(); // Use helper
         };
 
         const updateGoals = (newGoals) => {
@@ -1288,7 +1712,15 @@
         const renderView = () => {
           switch (view) {
             case "overview":
-              return <Overview history={history} user={user} />;
+              // UPDATED: Pass todayLog and update handler
+              return (
+                <Overview
+                  history={history}
+                  user={user}
+                  todayLog={todayLog}
+                  onUpdate={updateTodayLog}
+                />
+              );
             case "macros":
               return (
                 <Macros
@@ -1296,13 +1728,19 @@
                   goals={goals}
                   onUpdate={updateTodayLog}
                   foods={foods}
-                  onUpdateFoods={updateFoods}
                   onOpenManager={() => setIsManagerOpen(true)}
+                  onOpenLogHidden={() => setIsLogHiddenOpen(true)} // NEW PROP
+                  setModal={setModalState}
                 />
               );
             case "weight":
               return (
-                <WeightLog todayLog={todayLog} onUpdate={updateTodayLog} />
+                <WeightLog
+                  todayLog={todayLog}
+                  onUpdate={updateTodayLog}
+                  history={history}
+                  onDeleteWeightEntry={deleteWeightEntry}
+                />
               );
             case "profile":
               return (
@@ -1312,10 +1750,18 @@
                   onUpdateGoals={updateGoals}
                   onUpdateName={updateName}
                   onResetToday={resetToday}
+                  setModal={setModalState}
                 />
               );
             default:
-              return <Overview history={history} user={user} />;
+              return (
+                <Overview
+                  history={history}
+                  user={user}
+                  todayLog={todayLog}
+                  onUpdate={updateTodayLog}
+                />
+              );
           }
         };
 
@@ -1329,15 +1775,9 @@
                   day: "numeric",
                 })}
               </div>
-              <button
-                onClick={() => setView("profile")}
-                className="glass-card p-2 rounded-full hover:bg-white/10 active:scale-95 transition-all text-blue-300"
-              >
-                <SettingsIcon size={18} />
-              </button>
+              {/* REMOVED Settings button from header */}
             </div>
 
-            {/* Added overflow-y-auto and padding bottom for scrolling support on small screens */}
             <main className="flex-1 overflow-y-auto no-scrollbar px-5 pb-32 z-40 relative w-full">
               {renderView()}
             </main>
@@ -1373,6 +1813,17 @@
               >
                 <ScaleIcon size={24} />
               </button>
+              {/* NEW: Settings button in nav bar */}
+              <button
+                onClick={() => setView("profile")}
+                className={`p-3 rounded-xl transition-all ${
+                  view === "profile"
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <SettingsIcon size={24} />
+              </button>
             </nav>
 
             <FoodManager
@@ -1380,6 +1831,37 @@
               onClose={() => setIsManagerOpen(false)}
               foods={foods}
               onSaveFoods={updateFoods}
+              setModal={setModalState}
+            />
+
+            {/* NEW: Modal for logging hidden foods */}
+            <LogHiddenFoodModal
+              isOpen={isLogHiddenOpen}
+              onClose={() => setIsLogHiddenOpen(false)}
+              foods={foods}
+              onLogFood={(food) => {
+                const newEntry = {
+                  id: Date.now(),
+                  name: food.name,
+                  p: food.p,
+                  f: food.f,
+                  c: food.c,
+                  icon: food.icon,
+                };
+                updateTodayLog({
+                  protein: (todayLog.protein || 0) + food.p,
+                  fats: (todayLog.fats || 0) + food.f,
+                  carbs: (todayLog.carbs || 0) + food.c,
+                  entries: [newEntry, ...(todayLog.entries || [])],
+                });
+                setIsLogHiddenOpen(false); // Close modal after logging
+              }}
+            />
+
+            {/* Global Modal Renderer */}
+            <Modal
+              {...modalState}
+              onClose={() => setModalState({ ...modalState, isOpen: false })}
             />
           </div>
         );
