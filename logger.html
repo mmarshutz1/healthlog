@@ -119,9 +119,8 @@
       }
 
       .safe-pt {
-        /* UPDATED: This now calculates 1.5rem (24px) PLUS the safe area inset */
-        /* This pushes content below the camera/notch while keeping a nice margin on all devices */
-        padding-top: calc(env(safe-area-inset-top, 0rem) + 1.5rem);
+        /* UPDATED: Reduced base padding from 1.5rem (24px) to 1rem (16px) */
+        padding-top: calc(env(safe-area-inset-top, 0rem) + 1rem);
       }
       .safe-pb {
         padding-bottom: env(safe-area-inset-bottom, 24px);
@@ -451,9 +450,6 @@
 
       // --- Components ---
 
-      // REMOVED: No longer need a separate global const, it's in DB.DEFAULT_LOG_STRUCTURE
-      // const DEFAULT_DAILY_TASKS = { ... };
-
       // Task list definition
       const TASKS_CONFIG = [
         { key: "creatine", name: "Creatine" },
@@ -617,7 +613,8 @@
           <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
             <div className="bg-[#16213e] w-full h-full sm:h-[90%] sm:w-[90%] sm:rounded-2xl rounded-none flex flex-col modal-enter border border-white/10 shadow-2xl">
               {/* Header */}
-              <div className="flex justify-between items-center p-6 border-b border-white/5 safe-pt">
+              {/* UPDATED: Changed p-6 to px-6 pb-4 to match main header padding style */}
+              <div className="flex justify-between items-center px-6 pb-4 border-b border-white/5 safe-pt">
                 <h2 className="text-xl font-bold text-white">Food Library</h2>
                 <button
                   onClick={onClose}
@@ -842,10 +839,6 @@
         );
       };
 
-      {
-        /* <!--- NEW COMPONENT: Modal for logging hidden foods ---> */
-      }
-      // FIX: Changed JSX comment to JS comment
       // <!--- NEW COMPONENT: Modal for logging hidden foods --->
       const LogHiddenFoodModal = ({ isOpen, onClose, foods, onLogFood }) => {
         if (!isOpen) return null;
@@ -858,7 +851,8 @@
           <div className="absolute inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
             <div className="bg-[#16213e] w-full h-full sm:h-[70%] sm:w-[90%] sm:rounded-2xl rounded-none flex flex-col modal-enter border border-white/10 shadow-2xl">
               {/* Header */}
-              <div className="flex justify-between items-center p-6 border-b border-white/5 safe-pt">
+              {/* UPDATED: Changed p-6 to px-6 pb-4 to match main header padding style */}
+              <div className="flex justify-between items-center px-6 pb-4 border-b border-white/5 safe-pt">
                 <h2 className="text-xl font-bold text-white">
                   Log Hidden Food
                 </h2>
@@ -866,7 +860,7 @@
                   onClick={onClose}
                   className="p-2 bg-white/10 rounded-full hover:bg-white/20"
                 >
-                  {/* ... existing code ... */}
+                  <XIcon />
                 </button>
               </div>
 
@@ -1170,13 +1164,6 @@
         );
       };
 
-      {
-        /* <!--- THIS IS THE CORRECT, FUNCTIONING COMPONENT ---> */
-      }
-      {
-        /* UPDATED Overview Component */
-      }
-      // FIX: Changed JSX comment to JS comment
       // <!--- THIS IS THE CORRECT, FUNCTIONING COMPONENT --->
       // UPDATED Overview Component
       const Overview = ({ history, user, todayLog, onUpdate }) => {
@@ -1193,9 +1180,7 @@
             }));
         }, [history]);
 
-        {
-          /* BUGFIX: Use safer filter to prevent crash on 0 or empty string */
-        }
+        // BUGFIX: Use safer filter to prevent crash on 0 or empty string
         const latestWeightLog = [...history]
           .filter(
             (h) =>
@@ -1214,7 +1199,8 @@
 
         // Handler for toggling daily tasks
         const handleToggleTask = (taskName) => {
-          const currentTasks = todayLog.dailyTasks || DEFAULT_DAILY_TASKS;
+          const currentTasks =
+            todayLog.dailyTasks || DB.DEFAULT_LOG_STRUCTURE.dailyTasks;
           const newTasks = {
             ...currentTasks,
             [taskName]: !currentTasks[taskName],
@@ -1222,7 +1208,8 @@
           onUpdate({ dailyTasks: newTasks });
         };
 
-        const currentTasks = todayLog.dailyTasks || DEFAULT_DAILY_TASKS;
+        const currentTasks =
+          todayLog.dailyTasks || DB.DEFAULT_LOG_STRUCTURE.dailyTasks;
 
         return (
           <div className="flex flex-col space-y-6 animate-fade-in">
@@ -1350,10 +1337,6 @@
         );
       };
 
-      {
-        /* <!--- UPDATED WeightLog Component (BUGFIX & HEADER) ---> */
-      }
-      // FIX: Changed JSX comment to JS comment
       // <!--- UPDATED WeightLog Component (BUGFIX & HEADER) --->
       const WeightLog = ({
         todayLog,
@@ -1477,16 +1460,8 @@
         );
       };
 
-      {
-        /* <!--- END UPDATED WeightLog Component ---> */
-      }
-      // FIX: Changed JSX comment to JS comment
       // <!--- END UPDATED WeightLog Component --->
 
-      {
-        /* <!--- UPDATED Profile Component ---> */
-      }
-      // FIX: Changed JSX comment to JS comment
       // <!--- UPDATED Profile Component --->
       const Profile = ({
         goals,
@@ -1622,10 +1597,6 @@
         );
       };
 
-      {
-        /* <!--- UPDATED App Component ---> */
-      }
-      // FIX: Changed JSX comment to JS comment
       // <!--- UPDATED App Component --->
       const App = () => {
         const [view, setView] = useState("overview");
@@ -1637,12 +1608,7 @@
           carbs: 303,
         });
         const [todayLog, setTodayLog] = useState({
-          protein: 0,
-          fats: 0,
-          carbs: 0,
-          weight: "",
-          entries: [],
-          dailyTasks: DB.DEFAULT_LOG_STRUCTURE.dailyTasks, // UPDATED
+          ...DB.DEFAULT_LOG_STRUCTURE, // Use default structure for initial state
         });
         const [history, setHistory] = useState([]);
         const [foods, setFoods] = useState([]);
@@ -1669,7 +1635,6 @@
           setHistory(logsArray);
 
           const today = getTodayStr();
-          // UPDATED: Ensure dailyTasks exists on load
           // This is now much simpler because getLogs() did all the work
           const logForToday = allLogsMap[today] || {
             ...DB.DEFAULT_LOG_STRUCTURE,
@@ -1802,6 +1767,7 @@
 
         return (
           <div id="app-frame">
+            {/* UPDATED: Removed pt-6, safe-pt class handles all top padding */}
             <div className="flex justify-between items-center px-6 pb-4 z-50 shrink-0 safe-pt">
               <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
                 {new Date().toLocaleDateString("en-US", {
