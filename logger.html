@@ -273,9 +273,51 @@
         KEY_CONFIG: "liquid_macros_config_v2",
         KEY_FOODS: "liquid_macros_foods_v1",
 
+        // NEW: Define the default structure for a single day's log
+        // This is the "blueprint" for a perfect log entry.
+        DEFAULT_LOG_STRUCTURE: {
+          protein: 0,
+          fats: 0,
+          carbs: 0,
+          weight: "",
+          entries: [],
+          dailyTasks: {
+            creatine: false,
+            vitaminD: false,
+            fishOil: false,
+            whey: false,
+          },
+        },
+
         getLogs: () => {
           try {
-            return JSON.parse(localStorage.getItem(DB.KEY_LOGS)) || {};
+            const rawLogs = JSON.parse(localStorage.getItem(DB.KEY_LOGS)) || {};
+
+            // --- DATA MIGRATION ---
+            // This loop ensures every log entry, old or new, has the new properties.
+            // This prevents crashes from old data structures.
+            const migratedLogs = {};
+            for (const date in rawLogs) {
+              if (Object.prototype.hasOwnProperty.call(rawLogs, date)) {
+                const log = rawLogs[date];
+
+                // Ensure 'dailyTasks' object exists and has all keys
+                const migratedTasks = {
+                  ...DB.DEFAULT_LOG_STRUCTURE.dailyTasks, // Start with defaults
+                  ...(log.dailyTasks || {}), // Add any existing tasks
+                };
+
+                // Re-build the log with the guaranteed structure
+                // This applies all defaults first, then overwrites with saved data
+                migratedLogs[date] = {
+                  ...DB.DEFAULT_LOG_STRUCTURE, // Apply all defaults
+                  ...log, // Apply the loaded data (overwrites defaults)
+                  dailyTasks: migratedTasks, // Apply the safe tasks object
+                };
+              }
+            }
+            return migratedLogs;
+            // --- END MIGRATION ---
           } catch {
             return {};
           }
@@ -362,18 +404,27 @@
         },
 
         saveLog: (date, data) => {
-          const logs = DB.getLogs();
-          // UPDATED: Add default structure including dailyTasks
-          const defaultLog = {
-            protein: 0,
-            fats: 0,
-            carbs: 0,
-            weight: "",
-            entries: [],
-            dailyTasks: DEFAULT_DAILY_TASKS,
+          const logs = DB.getLogs(); // This now returns *migrated* logs
+
+          // This logic is now even safer
+          const existingLog = {
+            ...DB.DEFAULT_LOG_STRUCTURE,
+            ...(logs[date] || {}),
           };
-          const existingLog = { ...defaultLog, ...(logs[date] || {}) };
-          logs[date] = { ...existingLog, ...data };
+
+          // Merge the new data
+          const newLog = { ...existingLog, ...data };
+
+          // Special handling for merging dailyTasks object
+          if (data.dailyTasks) {
+            newLog.dailyTasks = {
+              ...existingLog.dailyTasks,
+              ...data.dailyTasks,
+            };
+          }
+
+          logs[date] = newLog;
+
           localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
           return logs[date];
         },
@@ -393,27 +444,15 @@
             delete logs[date];
             localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
           }
-          // UPDATED: Return default structure including dailyTasks
-          return {
-            protein: 0,
-            fats: 0,
-            carbs: 0,
-            weight: "",
-            entries: [],
-            dailyTasks: DEFAULT_DAILY_TASKS,
-          };
+          // Return a fresh copy of the default structure
+          return { ...DB.DEFAULT_LOG_STRUCTURE };
         },
       };
 
       // --- Components ---
 
-      // Global const for default tasks
-      const DEFAULT_DAILY_TASKS = {
-        creatine: false,
-        vitaminD: false,
-        fishOil: false,
-        whey: false,
-      };
+      // REMOVED: No longer need a separate global const, it's in DB.DEFAULT_LOG_STRUCTURE
+      // const DEFAULT_DAILY_TASKS = { ... };
 
       // Task list definition
       const TASKS_CONFIG = [
@@ -1603,7 +1642,7 @@
           carbs: 0,
           weight: "",
           entries: [],
-          dailyTasks: DEFAULT_DAILY_TASKS, // UPDATED
+          dailyTasks: DB.DEFAULT_LOG_STRUCTURE.dailyTasks, // UPDATED
         });
         const [history, setHistory] = useState([]);
         const [foods, setFoods] = useState([]);
@@ -1631,19 +1670,11 @@
 
           const today = getTodayStr();
           // UPDATED: Ensure dailyTasks exists on load
-          const defaultLog = {
-            protein: 0,
-            fats: 0,
-            carbs: 0,
-            weight: "",
-            entries: [],
-            dailyTasks: DEFAULT_DAILY_TASKS,
+          // This is now much simpler because getLogs() did all the work
+          const logForToday = allLogsMap[today] || {
+            ...DB.DEFAULT_LOG_STRUCTURE,
           };
-          const logForToday = allLogsMap[today] || defaultLog;
-          // Ensure new dailyTasks structure is applied to older data
-          if (!logForToday.dailyTasks) {
-            logForToday.dailyTasks = defaultLog.dailyTasks;
-          }
+
           setTodayLog(logForToday);
         };
 
