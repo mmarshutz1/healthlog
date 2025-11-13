@@ -44,12 +44,12 @@
         color: #e0e0e0;
         font-family: "Inter", sans-serif;
         overscroll-behavior: none;
-        height: 100vh;
+        /* REMOVED height: 100vh; */
         width: 100vw;
         margin: 0;
         display: flex;
         justify-content: center;
-        align-items: flex-start;
+        /* REMOVED align-items: flex-start; */
       }
 
       @media (min-width: 640px) {
@@ -62,9 +62,11 @@
       /* The App Container */
       #app-frame {
         width: 100%;
-        height: 100%;
+        /* UPDATED: Use 100dvh (dynamic viewport height) with 100vh as fallback */
+        height: 100vh; /* Fallback for older browsers */
+        height: 100dvh; /* This does the trick! */
         max-width: 480px;
-        max-height: 100%;
+        /* REMOVED max-height: 100%; */
         background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
         position: relative;
         overflow: hidden;
