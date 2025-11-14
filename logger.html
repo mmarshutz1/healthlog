@@ -1597,6 +1597,7 @@
         );
       };
 
+      // <!--- **** START OF MAJOR UPDATE **** --->
       // <!--- UPDATED App Component --->
       const App = () => {
         const [view, setView] = useState("overview");
@@ -1614,6 +1615,11 @@
         const [foods, setFoods] = useState([]);
         const [isManagerOpen, setIsManagerOpen] = useState(false);
         const [isLogHiddenOpen, setIsLogHiddenOpen] = useState(false); // NEW STATE
+
+        // NEW STATE to track the date the app thinks it is
+        const getTodayStr = () => new Date().toISOString().split("T")[0];
+        const [currentDate, setCurrentDate] = useState(getTodayStr());
+
         // Modal state lifted to App
         const [modalState, setModalState] = useState({
           isOpen: false,
@@ -1622,8 +1628,6 @@
           onConfirm: () => {},
           showCancel: false,
         });
-
-        const getTodayStr = () => new Date().toISOString().split("T")[0];
 
         // Helper to refresh state from DB
         const refreshStateFromDB = () => {
@@ -1634,7 +1638,7 @@
           }));
           setHistory(logsArray);
 
-          const today = getTodayStr();
+          const today = getTodayStr(); // Get the *current* date
           // This is now much simpler because getLogs() did all the work
           const logForToday = allLogsMap[today] || {
             ...DB.DEFAULT_LOG_STRUCTURE,
@@ -1643,18 +1647,57 @@
           setTodayLog(logForToday);
         };
 
+        // This effect runs ONCE on initial app load
         useEffect(() => {
           const loadData = () => {
             const conf = DB.getConfig();
             setGoals(conf.goals);
             setUser({ name: conf.name });
+
+            // SET The initial date
+            const today = getTodayStr();
+            setCurrentDate(today); // <-- Set the date state
+
             refreshStateFromDB(); // Use helper
             const loadedFoods = DB.getFoods();
             setFoods(loadedFoods);
             setLoading(false);
           };
           loadData();
-        }, []);
+        }, []); // Empty array means run once
+
+        // --- NEW useEffect to handle date changes ---
+        // This effect runs when the app becomes visible (e.g., user un-minimizes
+        // or switches back to the tab/PWA)
+        useEffect(() => {
+          const handleFocus = () => {
+            // Check what today's date *actually* is
+            const today = getTodayStr();
+
+            // Compare it to the date the app *thinks* it is
+            if (today !== currentDate) {
+              // If they are different, the day has changed!
+              setCurrentDate(today); // 1. Update the app's date
+              refreshStateFromDB(); // 2. Reload all data for the new date
+            }
+          };
+
+          // Listen for when the app window/tab gains focus
+          window.addEventListener("focus", handleFocus);
+          // Also listen for when the page visibility changes
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+              handleFocus();
+            }
+          });
+
+          // Clean up listeners when the component unmounts
+          return () => {
+            window.removeEventListener("focus", handleFocus);
+            document.removeEventListener("visibilitychange", handleFocus);
+          };
+        }, [currentDate]); // Re-register listeners if currentDate changes
+        // --- END NEW useEffect ---
 
         const updateTodayLog = (newData) => {
           const today = getTodayStr();
@@ -1867,6 +1910,7 @@
           </div>
         );
       };
+      // <!--- **** END OF MAJOR UPDATE **** --->
 
       const root = ReactDOM.createRoot(document.getElementById("root"));
       root.render(<App />);
