@@ -1182,15 +1182,15 @@
             </main>
 
             {/* FIXED NAVIGATION */}
-            {/* UPDATED: Reduced padding (p-4 -> px-4 pt-2) to thin out the bar */}
-            <nav className="flex-shrink-0 px-4 pt-2 safe-pb bg-[#1a1a2e]/95 backdrop-blur-md border-t border-white/5 z-50">
-               {/* UPDATED: Reduced card padding (p-2 -> p-1) */}
-               <div className="glass-card p-1 flex justify-around items-center shadow-lg">
-                {/* UPDATED: Reduced button padding (p-3 -> p-2) for slimmer look */}
-                <button onClick={() => setView("overview")} className={`p-2 rounded-xl transition-all ${view === "overview" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><HomeIcon size={24} /></button>
-                <button onClick={() => setView("macros")} className={`p-2 rounded-xl transition-all ${view === "macros" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><UtensilsIcon size={24} /></button>
-                <button onClick={() => setView("weight")} className={`p-2 rounded-xl transition-all ${view === "weight" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><ScaleIcon size={24} /></button>
-                <button onClick={() => setView("profile")} className={`p-2 rounded-xl transition-all ${view === "profile" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><SettingsIcon size={24} /></button>
+            {/* UPDATED: Removed top padding (pt-2 -> pt-0) to 'lower' the background profile while keeping the safe-pb */}
+            <nav className="flex-shrink-0 px-4 pt-0 safe-pb bg-[#1a1a2e]/95 backdrop-blur-md border-t border-white/5 z-50">
+               {/* UPDATED: Restored card padding (p-1 -> p-2) for the look you liked */}
+               <div className="glass-card p-2 flex justify-around items-center shadow-lg mt-2">
+                {/* UPDATED: Restored button padding (p-2 -> p-3) for better touch targets */}
+                <button onClick={() => setView("overview")} className={`p-3 rounded-xl transition-all ${view === "overview" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><HomeIcon size={24} /></button>
+                <button onClick={() => setView("macros")} className={`p-3 rounded-xl transition-all ${view === "macros" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><UtensilsIcon size={24} /></button>
+                <button onClick={() => setView("weight")} className={`p-3 rounded-xl transition-all ${view === "weight" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><ScaleIcon size={24} /></button>
+                <button onClick={() => setView("profile")} className={`p-3 rounded-xl transition-all ${view === "profile" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><SettingsIcon size={24} /></button>
               </div>
             </nav>
 
