@@ -44,17 +44,17 @@
         color: #e0e0e0;
         font-family: "Inter", sans-serif;
         overscroll-behavior: none;
-        /* REMOVED height: 100vh; */
         width: 100vw;
+        height: 100dvh; /* Fixed viewport height */
         margin: 0;
+        overflow: hidden; /* Prevent body scroll */
         display: flex;
         justify-content: center;
-        /* REMOVED align-items: flex-start; */
+        align-items: center;
       }
 
       @media (min-width: 640px) {
         body {
-          align-items: center;
           background: #111;
         }
       }
@@ -62,16 +62,12 @@
       /* The App Container */
       #app-frame {
         width: 100%;
-        /* UPDATED: Use 100dvh (dynamic viewport height) with 100vh as fallback */
-        height: 100vh; /* Fallback for older browsers */
-        height: 100dvh; /* This does the trick! */
+        height: 100%; /* Takes full body height */
         max-width: 480px;
-        /* REMOVED max-height: 100%; */
         background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
         position: relative;
-        overflow: hidden;
         display: flex;
-        flex-direction: column;
+        flex-direction: column; /* Flex layout for Header -> Content -> Nav */
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
       }
 
@@ -81,6 +77,7 @@
           max-height: 900px;
           border-radius: 24px;
           border: 1px solid #333;
+          overflow: hidden; /* Clip children */
         }
       }
 
@@ -119,11 +116,10 @@
       }
 
       .safe-pt {
-        /* UPDATED: Reduced base padding from 1.5rem (24px) to 1rem (16px) */
         padding-top: calc(env(safe-area-inset-top, 0rem) + 1rem);
       }
       .safe-pb {
-        padding-bottom: env(safe-area-inset-bottom, 24px);
+        padding-bottom: env(safe-area-inset-bottom, 1rem);
       }
 
       /* Animation for modal */
@@ -242,29 +238,31 @@
           <polyline points="7 3 7 8 15 8"></polyline>
         </IconBase>
       );
-
-      // NEW ICONS
       const CheckIcon = (p) => (
         <IconBase {...p}>
           <polyline points="20 6 9 17 4 12"></polyline>
         </IconBase>
       );
-
       const CheckCircleIcon = (p) => (
         <IconBase {...p}>
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
           <polyline points="22 4 12 14.01 9 11.01"></polyline>
         </IconBase>
       );
-
       const SearchIcon = (p) => (
         <IconBase {...p}>
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </IconBase>
       );
-
-      // --- END NEW ICONS ---
+      const CalendarIcon = (p) => (
+        <IconBase {...p}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </IconBase>
+      );
 
       // --- LocalStorage ---
       const DB = {
@@ -272,8 +270,6 @@
         KEY_CONFIG: "liquid_macros_config_v2",
         KEY_FOODS: "liquid_macros_foods_v1",
 
-        // NEW: Define the default structure for a single day's log
-        // This is the "blueprint" for a perfect log entry.
         DEFAULT_LOG_STRUCTURE: {
           protein: 0,
           fats: 0,
@@ -291,32 +287,22 @@
         getLogs: () => {
           try {
             const rawLogs = JSON.parse(localStorage.getItem(DB.KEY_LOGS)) || {};
-
-            // --- DATA MIGRATION ---
-            // This loop ensures every log entry, old or new, has the new properties.
-            // This prevents crashes from old data structures.
             const migratedLogs = {};
             for (const date in rawLogs) {
               if (Object.prototype.hasOwnProperty.call(rawLogs, date)) {
                 const log = rawLogs[date];
-
-                // Ensure 'dailyTasks' object exists and has all keys
                 const migratedTasks = {
-                  ...DB.DEFAULT_LOG_STRUCTURE.dailyTasks, // Start with defaults
-                  ...(log.dailyTasks || {}), // Add any existing tasks
+                  ...DB.DEFAULT_LOG_STRUCTURE.dailyTasks,
+                  ...(log.dailyTasks || {}),
                 };
-
-                // Re-build the log with the guaranteed structure
-                // This applies all defaults first, then overwrites with saved data
                 migratedLogs[date] = {
-                  ...DB.DEFAULT_LOG_STRUCTURE, // Apply all defaults
-                  ...log, // Apply the loaded data (overwrites defaults)
-                  dailyTasks: migratedTasks, // Apply the safe tasks object
+                  ...DB.DEFAULT_LOG_STRUCTURE,
+                  ...log,
+                  dailyTasks: migratedTasks,
                 };
               }
             }
             return migratedLogs;
-            // --- END MIGRATION ---
           } catch {
             return {};
           }
@@ -340,62 +326,13 @@
           try {
             const stored = JSON.parse(localStorage.getItem(DB.KEY_FOODS));
             if (stored) return stored;
-            // Defaults
             return [
-              {
-                id: 1,
-                name: "Egg",
-                icon: "🥚",
-                p: 6,
-                f: 5,
-                c: 0.6,
-                active: true,
-              },
-              {
-                id: 2,
-                name: "McChicken",
-                icon: "🍔",
-                p: 14,
-                f: 21,
-                c: 38,
-                active: true,
-              },
-              {
-                id: 3,
-                name: "Rice",
-                icon: "🍚",
-                p: 4.3,
-                f: 0.4,
-                c: 44,
-                active: true,
-              },
-              {
-                id: 4,
-                name: "Avocado",
-                icon: "🥑",
-                p: 2,
-                f: 15,
-                c: 9,
-                active: true,
-              },
-              {
-                id: 5,
-                name: "Shake",
-                icon: "🥤",
-                p: 7,
-                f: 9,
-                c: 32,
-                active: true,
-              },
-              {
-                id: 6,
-                name: "Banana",
-                icon: "🍌",
-                p: 1.3,
-                f: 0.4,
-                c: 27,
-                active: true,
-              },
+              { id: 1, name: "Egg", icon: "🥚", p: 6, f: 5, c: 0.6, active: true },
+              { id: 2, name: "McChicken", icon: "🍔", p: 14, f: 21, c: 38, active: true },
+              { id: 3, name: "Rice", icon: "🍚", p: 4.3, f: 0.4, c: 44, active: true },
+              { id: 4, name: "Avocado", icon: "🥑", p: 2, f: 15, c: 9, active: true },
+              { id: 5, name: "Shake", icon: "🥤", p: 7, f: 9, c: 32, active: true },
+              { id: 6, name: "Banana", icon: "🍌", p: 1.3, f: 0.4, c: 27, active: true },
             ];
           } catch {
             return [];
@@ -403,27 +340,19 @@
         },
 
         saveLog: (date, data) => {
-          const logs = DB.getLogs(); // This now returns *migrated* logs
-
-          // This logic is now even safer
+          const logs = DB.getLogs();
           const existingLog = {
             ...DB.DEFAULT_LOG_STRUCTURE,
             ...(logs[date] || {}),
           };
-
-          // Merge the new data
           const newLog = { ...existingLog, ...data };
-
-          // Special handling for merging dailyTasks object
           if (data.dailyTasks) {
             newLog.dailyTasks = {
               ...existingLog.dailyTasks,
               ...data.dailyTasks,
             };
           }
-
           logs[date] = newLog;
-
           localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
           return logs[date];
         },
@@ -436,21 +365,17 @@
           localStorage.setItem(DB.KEY_FOODS, JSON.stringify(foods));
           return foods;
         },
-
         resetLog: (date) => {
           const logs = DB.getLogs();
           if (logs[date]) {
             delete logs[date];
             localStorage.setItem(DB.KEY_LOGS, JSON.stringify(logs));
           }
-          // Return a fresh copy of the default structure
           return { ...DB.DEFAULT_LOG_STRUCTURE };
         },
       };
 
       // --- Components ---
-
-      // Task list definition
       const TASKS_CONFIG = [
         { key: "creatine", name: "Creatine" },
         { key: "vitaminD", name: "Vitamin D" },
@@ -458,13 +383,13 @@
         { key: "whey", name: "Whey Protein" },
       ];
 
-      // --- NEW Modal Component ---
       const Modal = ({
         isOpen,
         onClose,
         onConfirm,
         title,
         message,
+        children,
         showCancel = true,
       }) => {
         if (!isOpen) return null;
@@ -472,19 +397,20 @@
           <div className="absolute inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="glass-card bg-[#1a1a2e] p-6 rounded-2xl w-full max-w-sm border-indigo-500/30 modal-enter">
               <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
-              <p className="text-zinc-300 text-sm mb-6">{message}</p>
-              <div className="flex gap-3">
+              {message && <p className="text-zinc-300 text-sm mb-6">{message}</p>}
+              {children}
+              <div className="flex gap-3 mt-4">
                 {showCancel && (
                   <button
                     onClick={onClose}
-                    className="flex-1 bg-white/10 text-white py-3 rounded-xl font-medium"
+                    className="flex-1 bg-white/10 text-white py-3 rounded-xl font-medium hover:bg-white/20 transition-colors"
                   >
                     Cancel
                   </button>
                 )}
                 <button
                   onClick={onConfirm}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold"
+                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-500 transition-colors"
                 >
                   {showCancel ? "Confirm" : "OK"}
                 </button>
@@ -494,15 +420,7 @@
         );
       };
 
-      const SimpleGauge = ({
-        label,
-        current,
-        max,
-        colorClass,
-        unit,
-        fromColor,
-        toColor,
-      }) => {
+      const SimpleGauge = ({ label, current, max, colorClass, unit, fromColor, toColor }) => {
         const percentage = Math.min(100, Math.max(0, (current / max) * 100));
         return (
           <div className="flex flex-col items-center w-full">
@@ -526,30 +444,17 @@
             <div className="text-center">
               <p className={`font-bold text-sm ${colorClass}`}>{label}</p>
               <p className="text-[10px] text-zinc-400">
-                {Math.round(current)}/{max}
-                {unit}
+                {Math.round(current)}/{max}{unit}
               </p>
             </div>
           </div>
         );
       };
 
-      const FoodManager = ({
-        isOpen,
-        onClose,
-        foods,
-        onSaveFoods,
-        setModal,
-      }) => {
+      const FoodManager = ({ isOpen, onClose, foods, onSaveFoods, setModal }) => {
         const [localFoods, setLocalFoods] = useState(foods);
         const [editingId, setEditingId] = useState(null);
-        const [newFood, setNewFood] = useState({
-          name: "",
-          icon: "",
-          p: "",
-          f: "",
-          c: "",
-        });
+        const [newFood, setNewFood] = useState({ name: "", icon: "", p: "", f: "", c: "" });
 
         useEffect(() => {
           if (isOpen) setLocalFoods(foods);
@@ -558,9 +463,7 @@
         if (!isOpen) return null;
 
         const handleToggleActive = (id) => {
-          const updated = localFoods.map((f) =>
-            f.id === id ? { ...f, active: !f.active } : f
-          );
+          const updated = localFoods.map((f) => f.id === id ? { ...f, active: !f.active } : f);
           setLocalFoods(updated);
           onSaveFoods(updated);
         };
@@ -570,9 +473,7 @@
           setModal({
             isOpen: true,
             title: "Delete Food?",
-            message: `Are you sure you want to delete "${
-              food?.name || "this food"
-            }" from your library?`,
+            message: `Are you sure you want to delete "${food?.name || "this food"}"?`,
             onConfirm: () => {
               const updated = localFoods.filter((f) => f.id !== id);
               setLocalFoods(updated);
@@ -601,9 +502,7 @@
         };
 
         const handleEditSave = (id, updatedFields) => {
-          const updated = localFoods.map((f) =>
-            f.id === id ? { ...f, ...updatedFields } : f
-          );
+          const updated = localFoods.map((f) => f.id === id ? { ...f, ...updatedFields } : f);
           setLocalFoods(updated);
           onSaveFoods(updated);
           setEditingId(null);
@@ -612,171 +511,55 @@
         return (
           <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
             <div className="bg-[#16213e] w-full h-full sm:h-[90%] sm:w-[90%] sm:rounded-2xl rounded-none flex flex-col modal-enter border border-white/10 shadow-2xl">
-              {/* Header */}
-              {/* UPDATED: Changed p-6 to px-6 pb-4 to match main header padding style */}
               <div className="flex justify-between items-center px-6 pb-4 border-b border-white/5 safe-pt">
                 <h2 className="text-xl font-bold text-white">Food Library</h2>
-                <button
-                  onClick={onClose}
-                  className="p-2 bg-white/10 rounded-full hover:bg-white/20"
-                >
+                <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20">
                   <XIcon />
                 </button>
               </div>
-
-              {/* Content */}
               <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar pb-20">
-                {/* Add New */}
                 <div className="glass-card p-4 bg-indigo-500/10 border-indigo-500/30">
-                  <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-3">
-                    Create New Food
-                  </h3>
+                  <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-3">Create New Food</h3>
                   <div className="grid grid-cols-5 gap-2 mb-3">
-                    <input
-                      placeholder="Name"
-                      value={newFood.name}
-                      onChange={(e) =>
-                        setNewFood({ ...newFood, name: e.target.value })
-                      }
-                      className="col-span-3 glass-input p-2 rounded-lg text-white text-sm outline-none"
-                    />
-                    <input
-                      placeholder="Emoji"
-                      value={newFood.icon}
-                      onChange={(e) =>
-                        setNewFood({ ...newFood, icon: e.target.value })
-                      }
-                      className="col-span-2 glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
-                    />
+                    <input placeholder="Name" value={newFood.name} onChange={(e) => setNewFood({ ...newFood, name: e.target.value })} className="col-span-3 glass-input p-2 rounded-lg text-white text-sm outline-none" />
+                    <input placeholder="Emoji" value={newFood.icon} onChange={(e) => setNewFood({ ...newFood, icon: e.target.value })} className="col-span-2 glass-input p-2 rounded-lg text-white text-sm outline-none text-center" />
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-3">
-                    <input
-                      type="number"
-                      placeholder="Prot"
-                      value={newFood.p}
-                      onChange={(e) =>
-                        setNewFood({ ...newFood, p: e.target.value })
-                      }
-                      className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Fats"
-                      value={newFood.f}
-                      onChange={(e) =>
-                        setNewFood({ ...newFood, f: e.target.value })
-                      }
-                      className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Carbs"
-                      value={newFood.c}
-                      onChange={(e) =>
-                        setNewFood({ ...newFood, c: e.target.value })
-                      }
-                      className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center"
-                    />
+                    <input type="number" placeholder="Prot" value={newFood.p} onChange={(e) => setNewFood({ ...newFood, p: e.target.value })} className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center" />
+                    <input type="number" placeholder="Fats" value={newFood.f} onChange={(e) => setNewFood({ ...newFood, f: e.target.value })} className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center" />
+                    <input type="number" placeholder="Carbs" value={newFood.c} onChange={(e) => setNewFood({ ...newFood, c: e.target.value })} className="glass-input p-2 rounded-lg text-white text-sm outline-none text-center" />
                   </div>
-                  <button
-                    onClick={handleAdd}
-                    className="w-full py-3 bg-indigo-600 rounded-xl text-white font-bold shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2"
-                  >
+                  <button onClick={handleAdd} className="w-full py-3 bg-indigo-600 rounded-xl text-white font-bold shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2">
                     <PlusIcon size={18} /> Add to Library
                   </button>
                 </div>
-
-                {/* List */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                    Your Library
-                  </h3>
+                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Your Library</h3>
                   {localFoods.map((food) => (
-                    <div
-                      key={food.id}
-                      className={`flex flex-col bg-white/5 rounded-xl p-3 border ${
-                        food.active
-                          ? "border-green-500/30"
-                          : "border-white/5 opacity-70"
-                      }`}
-                    >
+                    <div key={food.id} className={`flex flex-col bg-white/5 rounded-xl p-3 border ${food.active ? "border-green-500/30" : "border-white/5 opacity-70"}`}>
                       {editingId === food.id ? (
                         <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <input
-                              defaultValue={food.name}
-                              id={`edit-name-${food.id}`}
-                              className="flex-1 bg-black/40 p-2 rounded text-white text-sm"
-                            />
-                            <input
-                              defaultValue={food.icon}
-                              id={`edit-icon-${food.id}`}
-                              className="w-12 bg-black/40 p-2 rounded text-white text-center text-sm"
-                            />
+                           <div className="flex gap-2">
+                            <input defaultValue={food.name} id={`edit-name-${food.id}`} className="flex-1 bg-black/40 p-2 rounded text-white text-sm" />
+                            <input defaultValue={food.icon} id={`edit-icon-${food.id}`} className="w-12 bg-black/40 p-2 rounded text-white text-center text-sm" />
                           </div>
                           <div className="flex gap-2">
-                            <input
-                              type="number"
-                              defaultValue={food.p}
-                              id={`edit-p-${food.id}`}
-                              className="w-1/3 bg-black/40 p-2 rounded text-white text-sm"
-                              placeholder="P"
-                            />
-                            <input
-                              type="number"
-                              defaultValue={food.f}
-                              id={`edit-f-${food.id}`}
-                              className="w-1/3 bg-black/40 p-2 rounded text-white text-sm"
-                              placeholder="F"
-                            />
-                            <input
-                              type="number"
-                              defaultValue={food.c}
-                              id={`edit-c-${food.id}`}
-                              className="w-1/3 bg-black/40 p-2 rounded text-white text-sm"
-                              placeholder="C"
-                            />
+                            <input type="number" defaultValue={food.p} id={`edit-p-${food.id}`} className="w-1/3 bg-black/40 p-2 rounded text-white text-sm" placeholder="P" />
+                            <input type="number" defaultValue={food.f} id={`edit-f-${food.id}`} className="w-1/3 bg-black/40 p-2 rounded text-white text-sm" placeholder="F" />
+                            <input type="number" defaultValue={food.c} id={`edit-c-${food.id}`} className="w-1/3 bg-black/40 p-2 rounded text-white text-sm" placeholder="C" />
                           </div>
                           <div className="flex gap-2 pt-2">
                             <button
-                              onClick={() => {
-                                handleEditSave(food.id, {
-                                  name: document.getElementById(
-                                    `edit-name-${food.id}`
-                                  ).value,
-                                  icon: document.getElementById(
-                                    `edit-icon-${food.id}`
-                                  ).value,
-                                  p:
-                                    parseFloat(
-                                      document.getElementById(
-                                        `edit-p-${food.id}`
-                                      ).value
-                                    ) || 0,
-                                  f:
-                                    parseFloat(
-                                      document.getElementById(
-                                        `edit-f-${food.id}`
-                                      ).value
-                                    ) || 0,
-                                  c:
-                                    parseFloat(
-                                      document.getElementById(
-                                        `edit-c-${food.id}`
-                                      ).value
-                                    ) || 0,
-                                });
-                              }}
+                              onClick={() => handleEditSave(food.id, {
+                                name: document.getElementById(`edit-name-${food.id}`).value,
+                                icon: document.getElementById(`edit-icon-${food.id}`).value,
+                                p: parseFloat(document.getElementById(`edit-p-${food.id}`).value) || 0,
+                                f: parseFloat(document.getElementById(`edit-f-${food.id}`).value) || 0,
+                                c: parseFloat(document.getElementById(`edit-c-${food.id}`).value) || 0,
+                              })}
                               className="flex-1 bg-green-600/80 py-2 rounded text-white text-xs font-bold"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="flex-1 bg-white/10 py-2 rounded text-white text-xs"
-                            >
-                              Cancel
-                            </button>
+                            >Save</button>
+                            <button onClick={() => setEditingId(null)} className="flex-1 bg-white/10 py-2 rounded text-white text-xs">Cancel</button>
                           </div>
                         </div>
                       ) : (
@@ -784,49 +567,20 @@
                           <div className="flex items-center gap-3">
                             <span className="text-2xl">{food.icon}</span>
                             <div>
-                              <p className="text-sm font-bold text-white">
-                                {food.name}
-                              </p>
+                              <p className="text-sm font-bold text-white">{food.name}</p>
                               <p className="text-[10px] text-zinc-400 flex gap-2">
-                                <span className="text-protein">
-                                  {Math.round(food.p)}p
-                                </span>
-                                <span className="text-fats">
-                                  {Math.round(food.f)}f
-                                </span>
-                                <span className="text-carbs">
-                                  {Math.round(food.c)}c
-                                </span>
+                                <span className="text-protein">{Math.round(food.p)}p</span>
+                                <span className="text-fats">{Math.round(food.f)}f</span>
+                                <span className="text-carbs">{Math.round(food.c)}c</span>
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setEditingId(food.id)}
-                              className="p-2 text-zinc-400 hover:text-white"
-                            >
-                              <EditIcon size={16} />
+                            <button onClick={() => setEditingId(food.id)} className="p-2 text-zinc-400 hover:text-white"><EditIcon size={16} /></button>
+                            <button onClick={() => handleToggleActive(food.id)} className={`p-2 rounded-lg ${food.active ? "text-green-400 bg-green-400/10" : "text-zinc-600 bg-zinc-800"}`}>
+                              {food.active ? <EyeIcon size={18} /> : <EyeOffIcon size={18} />}
                             </button>
-                            <button
-                              onClick={() => handleToggleActive(food.id)}
-                              className={`p-2 rounded-lg ${
-                                food.active
-                                  ? "text-green-400 bg-green-400/10"
-                                  : "text-zinc-600 bg-zinc-800"
-                              }`}
-                            >
-                              {food.active ? (
-                                <EyeIcon size={18} />
-                              ) : (
-                                <EyeOffIcon size={18} />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleDelete(food.id)}
-                              className="p-2 text-zinc-600 hover:text-red-400"
-                            >
-                              <TrashIcon size={16} />
-                            </button>
+                            <button onClick={() => handleDelete(food.id)} className="p-2 text-zinc-600 hover:text-red-400"><TrashIcon size={16} /></button>
                           </div>
                         </div>
                       )}
@@ -839,60 +593,30 @@
         );
       };
 
-      // <!--- NEW COMPONENT: Modal for logging hidden foods --->
       const LogHiddenFoodModal = ({ isOpen, onClose, foods, onLogFood }) => {
         if (!isOpen) return null;
-
-        const inactiveFoods = foods
-          .filter((f) => !f.active)
-          .sort((a, b) => a.name.localeCompare(b.name));
-
+        const inactiveFoods = foods.filter((f) => !f.active).sort((a, b) => a.name.localeCompare(b.name));
         return (
           <div className="absolute inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
             <div className="bg-[#16213e] w-full h-full sm:h-[70%] sm:w-[90%] sm:rounded-2xl rounded-none flex flex-col modal-enter border border-white/10 shadow-2xl">
-              {/* Header */}
-              {/* UPDATED: Changed p-6 to px-6 pb-4 to match main header padding style */}
               <div className="flex justify-between items-center px-6 pb-4 border-b border-white/5 safe-pt">
-                <h2 className="text-xl font-bold text-white">
-                  Log Hidden Food
-                </h2>
-                <button
-                  onClick={onClose}
-                  className="p-2 bg-white/10 rounded-full hover:bg-white/20"
-                >
-                  <XIcon />
-                </button>
+                <h2 className="text-xl font-bold text-white">Log Hidden Food</h2>
+                <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><XIcon /></button>
               </div>
-
-              {/* Content */}
               <div className="flex-1 overflow-y-auto p-5 space-y-3 no-scrollbar pb-20">
                 {inactiveFoods.length === 0 ? (
-                  <p className="text-center text-zinc-500 text-sm py-8">
-                    You have no hidden foods.
-                  </p>
+                  <p className="text-center text-zinc-500 text-sm py-8">You have no hidden foods.</p>
                 ) : (
                   inactiveFoods.map((food) => (
-                    <button
-                      key={food.id}
-                      onClick={() => onLogFood(food)}
-                      className="w-full flex items-center justify-between bg-white/5 rounded-xl p-3 border border-white/5 hover:bg-white/10"
-                    >
+                    <button key={food.id} onClick={() => onLogFood(food)} className="w-full flex items-center justify-between bg-white/5 rounded-xl p-3 border border-white/5 hover:bg-white/10">
                       <div className="flex items-center gap-3 text-left">
                         <span className="text-2xl">{food.icon}</span>
                         <div>
-                          <p className="text-sm font-bold text-white">
-                            {food.name}
-                          </p>
+                          <p className="text-sm font-bold text-white">{food.name}</p>
                           <p className="text-[10px] text-zinc-400 flex gap-2">
-                            <span className="text-protein">
-                              {Math.round(food.p)}p
-                            </span>
-                            <span className="text-fats">
-                              {Math.round(food.f)}f
-                            </span>
-                            <span className="text-carbs">
-                              {Math.round(food.c)}c
-                            </span>
+                            <span className="text-protein">{Math.round(food.p)}p</span>
+                            <span className="text-fats">{Math.round(food.f)}f</span>
+                            <span className="text-carbs">{Math.round(food.c)}c</span>
                           </p>
                         </div>
                       </div>
@@ -906,27 +630,16 @@
         );
       };
 
-      const Macros = ({
-        todayLog,
-        goals,
-        onUpdate,
-        foods,
-        onOpenManager,
-        onOpenLogHidden, // NEW PROP
-        setModal,
-      }) => {
+      const Macros = ({ todayLog, goals, onUpdate, foods, onOpenManager, onOpenLogHidden, setModal }) => {
         const [addAmount, setAddAmount] = useState("");
         const [selectedMacro, setSelectedMacro] = useState("protein");
         const entries = todayLog.entries || [];
-
-        // Filter active foods for the grid
         const activeFoods = foods.filter((f) => f.active);
 
         const handleAddManual = () => {
           if (!addAmount) return;
           const val = parseFloat(addAmount);
           const currentVal = todayLog[selectedMacro] || 0;
-
           const newEntry = {
             id: Date.now(),
             name: `Manual (${selectedMacro})`,
@@ -934,7 +647,6 @@
             f: selectedMacro === "fats" ? val : 0,
             c: selectedMacro === "carbs" ? val : 0,
           };
-
           onUpdate({
             [selectedMacro]: currentVal + val,
             entries: [newEntry, ...entries],
@@ -951,7 +663,6 @@
             c: food.c,
             icon: food.icon,
           };
-
           onUpdate({
             protein: (todayLog.protein || 0) + food.p,
             fats: (todayLog.fats || 0) + food.f,
@@ -981,180 +692,73 @@
 
         return (
           <div className="flex flex-col space-y-6">
-            {/* <!--- UPDATED HEADER ---> */}
             <header>
               <h1 className="text-3xl font-bold text-white">Daily Fuel</h1>
-              <p className="text-sm text-zinc-400">
-                Log your macros for the day.
-              </p>
+              <p className="text-sm text-zinc-400">Log your macros for the day.</p>
             </header>
-
-            {/* Gauges */}
             <div className="grid grid-cols-3 gap-4">
-              <SimpleGauge
-                label="Protein"
-                current={todayLog.protein || 0}
-                max={goals.protein}
-                colorClass="text-protein"
-                unit="g"
-                fromColor="#1e3a8a"
-                toColor="#3b82f6"
-              />
-              <SimpleGauge
-                label="Fats"
-                current={todayLog.fats || 0}
-                max={goals.fats}
-                colorClass="text-fats"
-                unit="g"
-                fromColor="#713f12"
-                toColor="#eab308"
-              />
-              <SimpleGauge
-                label="Carbs"
-                current={todayLog.carbs || 0}
-                max={goals.carbs}
-                colorClass="text-carbs"
-                unit="g"
-                fromColor="#14532d"
-                toColor="#22c55e"
-              />
+              <SimpleGauge label="Protein" current={todayLog.protein || 0} max={goals.protein} colorClass="text-protein" unit="g" fromColor="#1e3a8a" toColor="#3b82f6" />
+              <SimpleGauge label="Fats" current={todayLog.fats || 0} max={goals.fats} colorClass="text-fats" unit="g" fromColor="#713f12" toColor="#eab308" />
+              <SimpleGauge label="Carbs" current={todayLog.carbs || 0} max={goals.carbs} colorClass="text-carbs" unit="g" fromColor="#14532d" toColor="#22c55e" />
             </div>
-
-            {/* Manual Input */}
             <div className="glass-card p-4">
-              <h3 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-widest">
-                Manual Add
-              </h3>
+              <h3 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-widest">Manual Add</h3>
               <div className="flex gap-2">
                 <div className="flex p-1 bg-black/30 rounded-xl flex-1">
                   {["protein", "fats", "carbs"].map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setSelectedMacro(m)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
-                        selectedMacro === m
-                          ? "bg-indigo-600 text-white shadow-lg"
-                          : "text-zinc-500 hover:text-zinc-300"
-                      }`}
-                    >
+                    <button key={m} onClick={() => setSelectedMacro(m)} className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${selectedMacro === m ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"}`}>
                       {m.charAt(0).toUpperCase() + m.slice(1)}
                     </button>
                   ))}
                 </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="0"
-                  className="glass-input w-20 px-2 py-2 text-lg text-center text-white rounded-xl focus:outline-none focus:border-indigo-500 transition-all placeholder-zinc-600"
-                  value={addAmount}
-                  onChange={(e) => setAddAmount(e.target.value)}
-                />
-                <button
-                  onClick={handleAddManual}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-all"
-                >
-                  <PlusIcon size={20} />
-                </button>
+                <input type="number" inputMode="decimal" placeholder="0" className="glass-input w-20 px-2 py-2 text-lg text-center text-white rounded-xl focus:outline-none focus:border-indigo-500 transition-all placeholder-zinc-600" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} />
+                <button onClick={handleAddManual} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-all"><PlusIcon size={20} /></button>
               </div>
             </div>
-
-            {/* Quick Foods Grid */}
             <div className="glass-card p-5">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                  Quick Foods
-                </h3>
-                {/* UPDATED: Wrapper and new button */}
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Quick Foods</h3>
                 <div className="flex gap-2">
-                  <button
-                    onClick={onOpenLogHidden}
-                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
-                  >
-                    <SearchIcon size={12} /> Log Hidden
-                  </button>
-                  <button
-                    onClick={onOpenManager}
-                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
-                  >
-                    <EditIcon size={12} /> Edit List
-                  </button>
+                  <button onClick={onOpenLogHidden} className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"><SearchIcon size={12} /> Log Hidden</button>
+                  <button onClick={onOpenManager} className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"><EditIcon size={12} /> Edit List</button>
                 </div>
               </div>
-
               {activeFoods.length === 0 ? (
-                <div className="text-center py-8 text-zinc-500 text-sm">
-                  No active foods. Click "Edit List" to add some!
-                </div>
+                <div className="text-center py-8 text-zinc-500 text-sm">No active foods. Click "Edit List" to add some!</div>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
                   {activeFoods.map((food) => (
-                    <button
-                      key={food.id}
-                      onClick={() => handleAddFood(food)}
-                      className="glass-card bg-white/5 hover:bg-white/10 active:scale-95 transition-all p-3 flex flex-col items-center justify-center gap-1 border-0"
-                    >
+                    <button key={food.id} onClick={() => handleAddFood(food)} className="glass-card bg-white/5 hover:bg-white/10 active:scale-95 transition-all p-3 flex flex-col items-center justify-center gap-1 border-0">
                       <span className="text-2xl">{food.icon}</span>
-                      <span className="text-xs font-medium text-zinc-300 truncate w-full text-center">
-                        {food.name}
-                      </span>
+                      <span className="text-xs font-medium text-zinc-300 truncate w-full text-center">{food.name}</span>
                       <div className="flex gap-1 text-[9px] opacity-60">
-                        <span className="text-protein">
-                          {Math.round(food.p)}p
-                        </span>
+                        <span className="text-protein">{Math.round(food.p)}p</span>
                         <span className="text-fats">{Math.round(food.f)}f</span>
-                        <span className="text-carbs">
-                          {Math.round(food.c)}c
-                        </span>
+                        <span className="text-carbs">{Math.round(food.c)}c</span>
                       </div>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-
-            {/* History List */}
             {entries.length > 0 && (
               <div className="glass-card p-5">
-                <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">
-                  Today's Log
-                </h3>
+                <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">Today's Log</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto no-scrollbar">
                   {entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex items-center justify-between bg-white/5 rounded-lg p-3"
-                    >
+                    <div key={entry.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{entry.icon || "✏️"}</span>
                         <div>
-                          <p className="text-sm font-bold text-white">
-                            {entry.name}
-                          </p>
+                          <p className="text-sm font-bold text-white">{entry.name}</p>
                           <p className="text-[10px] text-zinc-400 flex gap-2">
-                            {entry.p > 0 && (
-                              <span className="text-protein">
-                                {Math.round(entry.p)}p
-                              </span>
-                            )}
-                            {entry.f > 0 && (
-                              <span className="text-fats">
-                                {Math.round(entry.f)}f
-                              </span>
-                            )}
-                            {entry.c > 0 && (
-                              <span className="text-carbs">
-                                {Math.round(entry.c)}c
-                              </span>
-                            )}
+                            {entry.p > 0 && <span className="text-protein">{Math.round(entry.p)}p</span>}
+                            {entry.f > 0 && <span className="text-fats">{Math.round(entry.f)}f</span>}
+                            {entry.c > 0 && <span className="text-carbs">{Math.round(entry.c)}c</span>}
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteEntry(entry)}
-                        className="text-zinc-500 hover:text-red-400 p-2 transition-colors"
-                      >
-                        <TrashIcon size={18} />
-                      </button>
+                      <button onClick={() => handleDeleteEntry(entry)} className="text-zinc-500 hover:text-red-400 p-2 transition-colors"><TrashIcon size={18} /></button>
                     </div>
                   ))}
                 </div>
@@ -1164,189 +768,88 @@
         );
       };
 
-      // <!--- THIS IS THE CORRECT, FUNCTIONING COMPONENT --->
-      // UPDATED Overview Component
       const Overview = ({ history, user, todayLog, onUpdate }) => {
         const chartData = useMemo(() => {
           if (!history || history.length === 0) return [];
-          return [...history]
-            .sort((a, b) => new Date(a.date) - new Date(b.date))
-            .slice(-7)
-            .map((log) => ({
-              name: new Date(log.date).toLocaleDateString("en-US", {
-                weekday: "short",
-              }),
-              weight: log.weight || null,
-            }));
+          // Correct sorting strictly by date
+          const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+          // Take last 7 entries (which are now sorted correctly)
+          return sortedHistory.slice(-7).map((log) => ({
+            name: new Date(log.date).toLocaleDateString("en-US", { weekday: "short" }),
+            weight: log.weight || null,
+          }));
         }, [history]);
 
-        // BUGFIX: Use safer filter to prevent crash on 0 or empty string
-        const latestWeightLog = [...history]
-          .filter(
-            (h) =>
-              h.weight !== null && h.weight !== undefined && h.weight !== ""
-          )
-          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-        const latestWeight = latestWeightLog ? latestWeightLog.weight : "--";
+        // Filter out entries with no weight for the stat cards
+        const weightLogs = [...history].filter(h => h.weight !== null && h.weight !== undefined && h.weight !== "").sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        const latestWeight = weightLogs.length > 0 ? weightLogs[0].weight : "--";
+        const startWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : "--";
 
-        const startWeightLog = [...history]
-          .filter(
-            (h) =>
-              h.weight !== null && h.weight !== undefined && h.weight !== ""
-          )
-          .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
-        const startWeight = startWeightLog ? startWeightLog.weight : "--";
-
-        // Handler for toggling daily tasks
         const handleToggleTask = (taskName) => {
-          const currentTasks =
-            todayLog.dailyTasks || DB.DEFAULT_LOG_STRUCTURE.dailyTasks;
-          const newTasks = {
-            ...currentTasks,
-            [taskName]: !currentTasks[taskName],
-          };
+          const currentTasks = todayLog.dailyTasks || DB.DEFAULT_LOG_STRUCTURE.dailyTasks;
+          const newTasks = { ...currentTasks, [taskName]: !currentTasks[taskName] };
           onUpdate({ dailyTasks: newTasks });
         };
 
-        const currentTasks =
-          todayLog.dailyTasks || DB.DEFAULT_LOG_STRUCTURE.dailyTasks;
+        const currentTasks = todayLog.dailyTasks || DB.DEFAULT_LOG_STRUCTURE.dailyTasks;
 
         return (
           <div className="flex flex-col space-y-6 animate-fade-in">
             <header>
-              <h1 className="text-3xl font-bold text-white">
-                Hello, {user?.name || "User"}
-              </h1>
-              <p className="text-sm text-zinc-400">
-                Here is your current status.
-              </p>
+              <h1 className="text-3xl font-bold text-white">Hello, {user?.name || "User"}</h1>
+              <p className="text-sm text-zinc-400">Here is your current status.</p>
             </header>
-
-            {/* MOVED Daily Checklist FROM HERE */}
-
             <div className="grid grid-cols-2 gap-4">
               <div className="glass-card p-4">
                 <div className="flex items-center gap-2 mb-1 text-blue-400">
                   <ScaleIcon size={16} />
-                  <span className="text-xs uppercase tracking-wider font-bold">
-                    Current
-                  </span>
+                  <span className="text-xs uppercase tracking-wider font-bold">Current</span>
                 </div>
-                <p className="text-2xl font-bold text-white">
-                  {latestWeight}{" "}
-                  <span className="text-sm text-zinc-400 font-normal">lbs</span>
-                </p>
+                <p className="text-2xl font-bold text-white">{latestWeight} <span className="text-sm text-zinc-400 font-normal">lbs</span></p>
               </div>
               <div className="glass-card p-4">
                 <div className="flex items-center gap-2 mb-1 text-green-400">
                   <ActivityIcon size={16} />
-                  <span className="text-xs uppercase tracking-wider font-bold">
-                    Start
-                  </span>
+                  <span className="text-xs uppercase tracking-wider font-bold">Start</span>
                 </div>
-                <p className="text-2xl font-bold text-white">
-                  {startWeight}{" "}
-                  <span className="text-sm text-zinc-400 font-normal">lbs</span>
-                </p>
+                <p className="text-2xl font-bold text-white">{startWeight} <span className="text-sm text-zinc-400 font-normal">lbs</span></p>
               </div>
             </div>
             <div className="glass-card p-4 h-72 flex flex-col">
-              <h3 className="text-xs font-medium text-zinc-400 mb-4 uppercase tracking-wider">
-                Weight Trend (Last 7 Days)
-              </h3>
+              <h3 className="text-xs font-medium text-zinc-400 mb-4 uppercase tracking-wider">Weight Trend (Last 7 Days)</h3>
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <XAxis
-                      dataKey="name"
-                      stroke="#64748b"
-                      fontSize={10}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      domain={["auto", "auto"]}
-                      stroke="#64748b"
-                      fontSize={10}
-                      tickLine={false}
-                      axisLine={false}
-                      width={30}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "rgba(26, 26, 46, 0.9)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "8px",
-                      }}
-                      itemStyle={{ color: "#fff", fontSize: "12px" }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="weight"
-                      stroke="#60A5FA"
-                      strokeWidth={3}
-                      dot={{
-                        r: 4,
-                        fill: "#1a1a2e",
-                        stroke: "#60A5FA",
-                        strokeWidth: 2,
-                      }}
-                    />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis domain={["auto", "auto"]} stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} width={30} />
+                    <Tooltip contentStyle={{ backgroundColor: "rgba(26, 26, 46, 0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} itemStyle={{ color: "#fff", fontSize: "12px" }} />
+                    <Line type="monotone" dataKey="weight" stroke="#60A5FA" strokeWidth={3} dot={{ r: 4, fill: "#1a1a2e", stroke: "#60A5FA", strokeWidth: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
-
-            {/* NEW: Daily Checklist (MOVED HERE) */}
             <div className="glass-card p-5">
-              <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">
-                Daily Checklist
-              </h3>
+              <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">Daily Checklist</h3>
               <div className="grid grid-cols-2 gap-3">
                 {TASKS_CONFIG.map((task) => {
                   const isChecked = currentTasks[task.key];
                   return (
-                    <button
-                      key={task.key}
-                      onClick={() => handleToggleTask(task.key)}
-                      className={`glass-card p-4 rounded-xl flex items-center justify-between transition-all ${
-                        isChecked
-                          ? "bg-green-500/20 border-green-500/30"
-                          : "bg-white/5 hover:bg-white/10"
-                      }`}
-                    >
-                      <span
-                        className={`text-sm font-medium ${
-                          isChecked ? "text-green-300" : "text-zinc-300"
-                        }`}
-                      >
-                        {task.name}
-                      </span>
-                      {isChecked ? (
-                        <CheckCircleIcon size={20} className="text-green-400" />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full border-2 border-zinc-600"></div>
-                      )}
+                    <button key={task.key} onClick={() => handleToggleTask(task.key)} className={`glass-card p-4 rounded-xl flex items-center justify-between transition-all ${isChecked ? "bg-green-500/20 border-green-500/30" : "bg-white/5 hover:bg-white/10"}`}>
+                      <span className={`text-sm font-medium ${isChecked ? "text-green-300" : "text-zinc-300"}`}>{task.name}</span>
+                      {isChecked ? <CheckCircleIcon size={20} className="text-green-400" /> : <div className="w-5 h-5 rounded-full border-2 border-zinc-600"></div>}
                     </button>
                   );
                 })}
               </div>
             </div>
-            {/* END: Daily Checklist */}
           </div>
         );
       };
 
-      // <!--- UPDATED WeightLog Component (BUGFIX & HEADER) --->
-      const WeightLog = ({
-        todayLog,
-        onUpdate,
-        history,
-        onDeleteWeightEntry,
-      }) => {
+      const WeightLog = ({ todayLog, onUpdate, history, onDeleteWeightEntry, onAddPastWeight }) => {
         const [weight, setWeight] = useState(todayLog.weight || "");
 
-        // Update local state if todayLog prop changes (e.g., from an external delete)
         useEffect(() => {
           setWeight(todayLog.weight || "");
         }, [todayLog.weight]);
@@ -1356,101 +859,57 @@
           onUpdate({ weight: parseFloat(weight) || "" });
         };
 
+        // Sort descending for the list view
         const weightHistory = useMemo(() => {
-          return (
-            [...history]
-              // BUGFIX: Use safer filter to prevent crash on 0 or empty string
-              .filter(
-                (log) =>
-                  log.weight !== null &&
-                  log.weight !== undefined &&
-                  log.weight !== ""
-              )
-              .sort((a, b) => new Date(b.date) - new Date(a.date))
-          );
+          return [...history]
+            .filter((log) => log.weight !== null && log.weight !== undefined && log.weight !== "")
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
         }, [history]);
 
         return (
           <div className="flex flex-col items-center justify-start space-y-6">
-            {/* <!--- NEW HEADER ---> */}
-            <header className="w-full">
-              <h1 className="text-3xl font-bold text-white">Weight Tracker</h1>
-              <p className="text-sm text-zinc-400">
-                Log today's weight and view your history.
-              </p>
+            <header className="w-full flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-white">Weight Tracker</h1>
+                <p className="text-sm text-zinc-400">Log today's weight and view your history.</p>
+              </div>
             </header>
-
-            {/* Log Today's Weight */}
+            
             <div className="w-full glass-card p-8 flex flex-col items-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-              {/* <!--- UPDATED SUB-HEADER ---> */}
-              <h2 className="text-xl font-bold mb-6 text-white">
-                Log Today's Weight
-              </h2>
-              <form
-                onSubmit={handleSave}
-                className="flex flex-col w-full gap-8"
-              >
+              <h2 className="text-xl font-bold mb-6 text-white">Log Today's Weight</h2>
+              <form onSubmit={handleSave} className="flex flex-col w-full gap-8">
                 <div className="relative">
-                  <input
-                    type="number"
-                    step="0.1"
-                    inputMode="decimal"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className="w-full bg-transparent text-6xl font-bold text-center text-white border-b-2 border-zinc-700 focus:border-indigo-500 focus:outline-none pb-4 transition-colors placeholder-zinc-700"
-                    placeholder="0.0"
-                  />
-                  <span className="absolute bottom-6 right-4 text-zinc-500 text-xl">
-                    lbs
-                  </span>
+                  <input type="number" step="0.1" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full bg-transparent text-6xl font-bold text-center text-white border-b-2 border-zinc-700 focus:border-indigo-500 focus:outline-none pb-4 transition-colors placeholder-zinc-700" placeholder="0.0" />
+                  <span className="absolute bottom-6 right-4 text-zinc-500 text-xl">lbs</span>
                 </div>
-                <button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg"
-                >
-                  Save Today's Weight
-                </button>
+                <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg">Save Today's Weight</button>
               </form>
             </div>
 
-            {/* Weight History List */}
+             <div className="w-full flex justify-end">
+                <button onClick={onAddPastWeight} className="flex items-center gap-2 text-sm text-indigo-400 bg-indigo-500/10 px-4 py-2 rounded-lg hover:bg-indigo-500/20 transition-all">
+                  <CalendarIcon size={16}/> Log Past Weight
+                </button>
+            </div>
+
             <div className="w-full glass-card p-5 mt-8">
-              <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">
-                Weight History
-              </h3>
+              <h3 className="text-xs font-bold text-zinc-500 mb-4 uppercase tracking-widest">Weight History</h3>
               <div className="space-y-3 max-h-60 overflow-y-auto no-scrollbar">
                 {weightHistory.length === 0 ? (
-                  <p className="text-center text-zinc-500 text-sm py-4">
-                    No weight history logged.
-                  </p>
+                  <p className="text-center text-zinc-500 text-sm py-4">No weight history logged.</p>
                 ) : (
                   weightHistory.map((log) => (
-                    <div
-                      key={log.date}
-                      className="flex items-center justify-between bg-white/5 rounded-lg p-3"
-                    >
+                    <div key={log.date} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
                       <div>
                         <p className="text-sm font-bold text-white">
-                          {log.weight}{" "}
-                          <span className="text-xs text-zinc-400 font-normal">
-                            lbs
-                          </span>
+                          {log.weight} <span className="text-xs text-zinc-400 font-normal">lbs</span>
                         </p>
                         <p className="text-[10px] text-zinc-400">
-                          {new Date(log.date).toLocaleDateString("en-US", {
-                            weekday: "long",
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {new Date(log.date).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
                         </p>
                       </div>
-                      <button
-                        onClick={() => onDeleteWeightEntry(log.date)}
-                        className="text-zinc-500 hover:text-red-400 p-2 transition-colors"
-                      >
-                        <TrashIcon size={18} />
-                      </button>
+                      <button onClick={() => onDeleteWeightEntry(log.date)} className="text-zinc-500 hover:text-red-400 p-2 transition-colors"><TrashIcon size={18} /></button>
                     </div>
                   ))
                 )}
@@ -1460,22 +919,11 @@
         );
       };
 
-      // <!--- END UPDATED WeightLog Component --->
-
-      // <!--- UPDATED Profile Component --->
-      const Profile = ({
-        goals,
-        user,
-        onUpdateGoals,
-        onUpdateName,
-        onResetToday,
-        setModal,
-      }) => {
+      const Profile = ({ goals, user, onUpdateGoals, onUpdateName, onResetToday, setModal }) => {
         const [localGoals, setLocalGoals] = useState(goals);
         const [name, setName] = useState(user?.name || "User");
 
-        const handleGoalChange = (key, val) =>
-          setLocalGoals((prev) => ({ ...prev, [key]: parseInt(val) || 0 }));
+        const handleGoalChange = (key, val) => setLocalGoals((prev) => ({ ...prev, [key]: parseInt(val) || 0 }));
 
         const handleSave = () => {
           onUpdateGoals(localGoals);
@@ -1493,8 +941,7 @@
           setModal({
             isOpen: true,
             title: "Clear Today's Log?",
-            message:
-              "This will reset macros and weight for today only. Are you sure?",
+            message: "This will reset macros and checklist for today. YOUR WEIGHT LOG WILL BE SAVED.",
             onConfirm: () => {
               onResetToday();
               setModal({ isOpen: false });
@@ -1507,8 +954,7 @@
           setModal({
             isOpen: true,
             title: "Factory Reset?",
-            message:
-              "WARNING: This will wipe ALL history, foods, and settings. This cannot be undone.",
+            message: "WARNING: This will wipe ALL history, foods, and settings. This cannot be undone.",
             onConfirm: () => {
               localStorage.clear();
               window.location.reload();
@@ -1519,50 +965,23 @@
 
         return (
           <div className="space-y-6 pb-8">
-            {/* <!--- UPDATED HEADER ---> */}
             <header>
               <h1 className="text-3xl font-bold text-white">Settings</h1>
-              <p className="text-sm text-zinc-400">
-                Manage your goals, data, and preferences.
-              </p>
+              <p className="text-sm text-zinc-400">Manage your goals, data, and preferences.</p>
             </header>
             <div className="space-y-4">
               <div className="glass-card p-5">
-                <label className="block text-xs text-zinc-400 mb-2 uppercase tracking-wider font-bold">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="glass-input w-full rounded-xl p-3 text-white focus:border-indigo-500 focus:outline-none"
-                />
+                <label className="block text-xs text-zinc-400 mb-2 uppercase tracking-wider font-bold">Display Name</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="glass-input w-full rounded-xl p-3 text-white focus:border-indigo-500 focus:outline-none" />
               </div>
               <div className="glass-card p-5">
-                <h3 className="text-xs text-zinc-400 mb-5 uppercase tracking-wider font-bold border-b border-zinc-700/50 pb-3">
-                  Macro Targets
-                </h3>
+                <h3 className="text-xs text-zinc-400 mb-5 uppercase tracking-wider font-bold border-b border-zinc-700/50 pb-3">Macro Targets</h3>
                 <div className="space-y-5">
                   {["protein", "fats", "carbs"].map((g) => (
                     <div key={g} className="flex items-center justify-between">
-                      <label
-                        className={`capitalize text-base font-medium ${
-                          g === "protein"
-                            ? "text-protein"
-                            : g === "fats"
-                            ? "text-fats"
-                            : "text-carbs"
-                        }`}
-                      >
-                        {g}
-                      </label>
+                      <label className={`capitalize text-base font-medium ${g === "protein" ? "text-protein" : g === "fats" ? "text-fats" : "text-carbs"}`}>{g}</label>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={localGoals[g]}
-                          onChange={(e) => handleGoalChange(g, e.target.value)}
-                          className="glass-input rounded-lg p-2 w-24 text-right text-white focus:border-indigo-500 focus:outline-none text-base"
-                        />
+                        <input type="number" value={localGoals[g]} onChange={(e) => handleGoalChange(g, e.target.value)} className="glass-input rounded-lg p-2 w-24 text-right text-white focus:border-indigo-500 focus:outline-none text-base" />
                         <span className="text-zinc-500 text-sm w-4">g</span>
                       </div>
                     </div>
@@ -1570,170 +989,153 @@
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleSave}
-              className="w-full bg-white text-black font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg"
-            >
-              Save Changes
-            </button>
+            <button onClick={handleSave} className="w-full bg-white text-black font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg">Save Changes</button>
             <div className="pt-4 border-t border-zinc-800 mt-8 space-y-3">
-              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">
-                Data Management
-              </h3>
-              <button
-                onClick={handleResetToday}
-                className="w-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-bold py-3 rounded-xl hover:bg-yellow-500/20 transition-all text-sm"
-              >
-                Clear Today's Log
-              </button>
-              <button
-                onClick={handleResetAll}
-                className="w-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-3 rounded-xl hover:bg-red-500/20 transition-all text-sm"
-              >
-                Factory Reset (Erase All)
-              </button>
+              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Data Management</h3>
+              <button onClick={handleResetToday} className="w-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-bold py-3 rounded-xl hover:bg-yellow-500/20 transition-all text-sm">Clear Today's Log</button>
+              <button onClick={handleResetAll} className="w-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold py-3 rounded-xl hover:bg-red-500/20 transition-all text-sm">Factory Reset (Erase All)</button>
             </div>
           </div>
         );
       };
 
-      // <!--- **** START OF MAJOR UPDATE **** --->
-      // <!--- UPDATED App Component --->
       const App = () => {
         const [view, setView] = useState("overview");
         const [loading, setLoading] = useState(true);
         const [user, setUser] = useState(null);
-        const [goals, setGoals] = useState({
-          protein: 260,
-          fats: 135,
-          carbs: 303,
-        });
-        const [todayLog, setTodayLog] = useState({
-          ...DB.DEFAULT_LOG_STRUCTURE, // Use default structure for initial state
-        });
+        const [goals, setGoals] = useState({ protein: 260, fats: 135, carbs: 303 });
+        const [todayLog, setTodayLog] = useState({ ...DB.DEFAULT_LOG_STRUCTURE });
         const [history, setHistory] = useState([]);
         const [foods, setFoods] = useState([]);
         const [isManagerOpen, setIsManagerOpen] = useState(false);
-        const [isLogHiddenOpen, setIsLogHiddenOpen] = useState(false); // NEW STATE
-
-        // NEW STATE to track the date the app thinks it is
-        const getTodayStr = () => new Date().toISOString().split("T")[0];
+        const [isLogHiddenOpen, setIsLogHiddenOpen] = useState(false);
+        const getTodayStr = () => new Date().toLocaleDateString("en-CA"); // Use YYYY-MM-DD local time
         const [currentDate, setCurrentDate] = useState(getTodayStr());
 
-        // Modal state lifted to App
-        const [modalState, setModalState] = useState({
-          isOpen: false,
-          title: "",
-          message: "",
-          onConfirm: () => {},
-          showCancel: false,
-        });
+        const [modalState, setModalState] = useState({ isOpen: false, title: "", message: "", onConfirm: () => {}, showCancel: false, children: null });
 
-        // Helper to refresh state from DB
         const refreshStateFromDB = () => {
           const allLogsMap = DB.getLogs();
-          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({
-            date,
-            ...data,
-          }));
+          const logsArray = Object.entries(allLogsMap).map(([date, data]) => ({ date, ...data }));
           setHistory(logsArray);
-
-          const today = getTodayStr(); // Get the *current* date
-          // This is now much simpler because getLogs() did all the work
-          const logForToday = allLogsMap[today] || {
-            ...DB.DEFAULT_LOG_STRUCTURE,
-          };
-
+          const today = getTodayStr();
+          const logForToday = allLogsMap[today] || { ...DB.DEFAULT_LOG_STRUCTURE };
           setTodayLog(logForToday);
         };
 
-        // This effect runs ONCE on initial app load
         useEffect(() => {
           const loadData = () => {
             const conf = DB.getConfig();
             setGoals(conf.goals);
             setUser({ name: conf.name });
-
-            // SET The initial date
-            const today = getTodayStr();
-            setCurrentDate(today); // <-- Set the date state
-
-            refreshStateFromDB(); // Use helper
-            const loadedFoods = DB.getFoods();
-            setFoods(loadedFoods);
+            setCurrentDate(getTodayStr());
+            refreshStateFromDB();
+            setFoods(DB.getFoods());
             setLoading(false);
           };
           loadData();
-        }, []); // Empty array means run once
+        }, []);
 
-        // --- NEW useEffect to handle date changes ---
-        // This effect runs when the app becomes visible (e.g., user un-minimizes
-        // or switches back to the tab/PWA)
+        // --- 12:01 AM Auto Refresh & Heartbeat ---
         useEffect(() => {
-          const handleFocus = () => {
-            // Check what today's date *actually* is
-            const today = getTodayStr();
-
-            // Compare it to the date the app *thinks* it is
-            if (today !== currentDate) {
-              // If they are different, the day has changed!
-              setCurrentDate(today); // 1. Update the app's date
-              refreshStateFromDB(); // 2. Reload all data for the new date
-            }
+          const checkDate = () => {
+             const today = getTodayStr();
+             if (today !== currentDate) {
+               console.log("New day detected! Refreshing...");
+               setCurrentDate(today);
+               refreshStateFromDB();
+             }
           };
-
-          // Listen for when the app window/tab gains focus
+          
+          // Check immediately on focus
+          const handleFocus = () => checkDate();
           window.addEventListener("focus", handleFocus);
-          // Also listen for when the page visibility changes
           document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-              handleFocus();
-            }
+            if (document.visibilityState === "visible") handleFocus();
           });
 
-          // Clean up listeners when the component unmounts
+          // Check every minute (60000ms) to catch the 12:01 transition while app is open
+          const interval = setInterval(checkDate, 60000);
+
           return () => {
             window.removeEventListener("focus", handleFocus);
             document.removeEventListener("visibilitychange", handleFocus);
+            clearInterval(interval);
           };
-        }, [currentDate]); // Re-register listeners if currentDate changes
-        // --- END NEW useEffect ---
+        }, [currentDate]);
 
         const updateTodayLog = (newData) => {
           const today = getTodayStr();
           DB.saveLog(today, newData);
-          refreshStateFromDB(); // Use helper to ensure all state is in sync
+          refreshStateFromDB();
         };
 
-        // NEW: Handler to delete just the weight from a log
         const deleteWeightEntry = (date) => {
           setModalState({
             isOpen: true,
-            title: "Delete Weight Entry?",
-            message: `Are you sure you want to delete the weight entry for ${new Date(
-              date
-            ).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}?`,
+            title: "Delete Weight?",
+            message: `Delete weight for ${new Date(date).toLocaleDateString()}?`,
             onConfirm: () => {
-              DB.saveLog(date, { weight: "" }); // Save an empty string for weight
-              refreshStateFromDB(); // Refresh history and todayLog
+              DB.saveLog(date, { weight: "" });
+              refreshStateFromDB();
               setModalState({ isOpen: false });
             },
             showCancel: true,
           });
         };
 
+        // --- Feature: Add Past Weight ---
+        const openAddPastWeightModal = () => {
+           let dateVal = "";
+           let weightVal = "";
+           
+           const ModalContent = () => (
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-xs text-zinc-400 mb-1">Date</label>
+                 <input type="date" onChange={(e) => dateVal = e.target.value} className="glass-input w-full p-3 rounded-xl text-white" />
+               </div>
+               <div>
+                 <label className="block text-xs text-zinc-400 mb-1">Weight (lbs)</label>
+                 <input type="number" step="0.1" onChange={(e) => weightVal = e.target.value} className="glass-input w-full p-3 rounded-xl text-white" placeholder="0.0" />
+               </div>
+             </div>
+           );
+
+           setModalState({
+             isOpen: true,
+             title: "Log Past Weight",
+             message: "Enter the date and weight below.",
+             children: <ModalContent />,
+             showCancel: true,
+             onConfirm: () => {
+                if(dateVal && weightVal) {
+                   DB.saveLog(dateVal, { weight: parseFloat(weightVal) });
+                   refreshStateFromDB();
+                   setModalState({ isOpen: false });
+                }
+             }
+           });
+        }
+
         const updateFoods = (newFoods) => {
           const saved = DB.saveFoods(newFoods);
           setFoods(saved);
         };
 
+        // --- Feature: Safe Reset ---
         const resetToday = () => {
           const today = getTodayStr();
-          DB.resetLog(today);
-          refreshStateFromDB(); // Use helper
+          // Get current log to retrieve the weight
+          const currentLog = DB.getLogs()[today] || {};
+          const existingWeight = currentLog.weight;
+          
+          // Reset everything BUT put weight back in
+          const freshLog = { ...DB.DEFAULT_LOG_STRUCTURE };
+          if (existingWeight) freshLog.weight = existingWeight;
+          
+          DB.saveLog(today, freshLog); // Save directly overwriting the entry
+          refreshStateFromDB();
         };
 
         const updateGoals = (newGoals) => {
@@ -1745,172 +1147,52 @@
           setUser({ name: updated.name });
         };
 
-        if (loading)
-          return (
-            <div className="h-full w-full flex items-center justify-center text-zinc-400">
-              Loading...
-            </div>
-          );
+        if (loading) return <div className="h-full w-full flex items-center justify-center text-zinc-400">Loading...</div>;
 
         const renderView = () => {
           switch (view) {
-            case "overview":
-              // UPDATED: Pass todayLog and update handler
-              return (
-                <Overview
-                  history={history}
-                  user={user}
-                  todayLog={todayLog}
-                  onUpdate={updateTodayLog}
-                />
-              );
-            case "macros":
-              return (
-                <Macros
-                  todayLog={todayLog}
-                  goals={goals}
-                  onUpdate={updateTodayLog}
-                  foods={foods}
-                  onOpenManager={() => setIsManagerOpen(true)}
-                  onOpenLogHidden={() => setIsLogHiddenOpen(true)} // NEW PROP
-                  setModal={setModalState}
-                />
-              );
-            case "weight":
-              return (
-                <WeightLog
-                  todayLog={todayLog}
-                  onUpdate={updateTodayLog}
-                  history={history}
-                  onDeleteWeightEntry={deleteWeightEntry}
-                />
-              );
-            case "profile":
-              return (
-                <Profile
-                  goals={goals}
-                  user={user}
-                  onUpdateGoals={updateGoals}
-                  onUpdateName={updateName}
-                  onResetToday={resetToday}
-                  setModal={setModalState}
-                />
-              );
-            default:
-              return (
-                <Overview
-                  history={history}
-                  user={user}
-                  todayLog={todayLog}
-                  onUpdate={updateTodayLog}
-                />
-              );
+            case "overview": return <Overview history={history} user={user} todayLog={todayLog} onUpdate={updateTodayLog} />;
+            case "macros": return <Macros todayLog={todayLog} goals={goals} onUpdate={updateTodayLog} foods={foods} onOpenManager={() => setIsManagerOpen(true)} onOpenLogHidden={() => setIsLogHiddenOpen(true)} setModal={setModalState} />;
+            case "weight": return <WeightLog todayLog={todayLog} onUpdate={updateTodayLog} history={history} onDeleteWeightEntry={deleteWeightEntry} onAddPastWeight={openAddPastWeightModal} />;
+            case "profile": return <Profile goals={goals} user={user} onUpdateGoals={updateGoals} onUpdateName={updateName} onResetToday={resetToday} setModal={setModalState} />;
+            default: return <Overview history={history} user={user} todayLog={todayLog} onUpdate={updateTodayLog} />;
           }
         };
 
         return (
           <div id="app-frame">
-            {/* UPDATED: Removed pt-6, safe-pt class handles all top padding */}
-            <div className="flex justify-between items-center px-6 pb-4 z-50 shrink-0 safe-pt">
+            {/* HEADER */}
+            <div className="flex-shrink-0 flex justify-between items-center px-6 py-4 z-50 safe-pt bg-[#1a1a2e] border-b border-white/5">
               <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </div>
-              {/* REMOVED Settings button from header */}
             </div>
 
-            <main className="flex-1 overflow-y-auto no-scrollbar px-5 pb-32 z-40 relative w-full">
+            {/* MAIN SCROLLABLE CONTENT */}
+            <main className="flex-1 overflow-y-auto no-scrollbar px-5 py-6 z-40 relative w-full">
               {renderView()}
             </main>
 
-            <nav className="absolute bottom-6 left-5 right-5 glass-card p-2 flex justify-around items-center z-50 shadow-2xl safe-pb">
-              <button
-                onClick={() => setView("overview")}
-                className={`p-3 rounded-xl transition-all ${
-                  view === "overview"
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <HomeIcon size={24} />
-              </button>
-              <button
-                onClick={() => setView("macros")}
-                className={`p-3 rounded-xl transition-all ${
-                  view === "macros"
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <UtensilsIcon size={24} />
-              </button>
-              <button
-                onClick={() => setView("weight")}
-                className={`p-3 rounded-xl transition-all ${
-                  view === "weight"
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <ScaleIcon size={24} />
-              </button>
-              {/* NEW: Settings button in nav bar */}
-              <button
-                onClick={() => setView("profile")}
-                className={`p-3 rounded-xl transition-all ${
-                  view === "profile"
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <SettingsIcon size={24} />
-              </button>
+            {/* FIXED NAVIGATION */}
+            <nav className="flex-shrink-0 p-4 pb-8 safe-pb bg-[#1a1a2e]/95 backdrop-blur-md border-t border-white/5 z-50">
+               <div className="glass-card p-2 flex justify-around items-center shadow-lg">
+                <button onClick={() => setView("overview")} className={`p-3 rounded-xl transition-all ${view === "overview" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><HomeIcon size={24} /></button>
+                <button onClick={() => setView("macros")} className={`p-3 rounded-xl transition-all ${view === "macros" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><UtensilsIcon size={24} /></button>
+                <button onClick={() => setView("weight")} className={`p-3 rounded-xl transition-all ${view === "weight" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><ScaleIcon size={24} /></button>
+                <button onClick={() => setView("profile")} className={`p-3 rounded-xl transition-all ${view === "profile" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}><SettingsIcon size={24} /></button>
+              </div>
             </nav>
 
-            <FoodManager
-              isOpen={isManagerOpen}
-              onClose={() => setIsManagerOpen(false)}
-              foods={foods}
-              onSaveFoods={updateFoods}
-              setModal={setModalState}
-            />
-
-            {/* NEW: Modal for logging hidden foods */}
-            <LogHiddenFoodModal
-              isOpen={isLogHiddenOpen}
-              onClose={() => setIsLogHiddenOpen(false)}
-              foods={foods}
-              onLogFood={(food) => {
-                const newEntry = {
-                  id: Date.now(),
-                  name: food.name,
-                  p: food.p,
-                  f: food.f,
-                  c: food.c,
-                  icon: food.icon,
-                };
-                updateTodayLog({
-                  protein: (todayLog.protein || 0) + food.p,
-                  fats: (todayLog.fats || 0) + food.f,
-                  carbs: (todayLog.carbs || 0) + food.c,
-                  entries: [newEntry, ...(todayLog.entries || [])],
-                });
-                setIsLogHiddenOpen(false); // Close modal after logging
-              }}
-            />
-
-            {/* Global Modal Renderer */}
-            <Modal
-              {...modalState}
-              onClose={() => setModalState({ ...modalState, isOpen: false })}
-            />
+            <FoodManager isOpen={isManagerOpen} onClose={() => setIsManagerOpen(false)} foods={foods} onSaveFoods={updateFoods} setModal={setModalState} />
+            <LogHiddenFoodModal isOpen={isLogHiddenOpen} onClose={() => setIsLogHiddenOpen(false)} foods={foods} onLogFood={(food) => {
+                const newEntry = { id: Date.now(), name: food.name, p: food.p, f: food.f, c: food.c, icon: food.icon };
+                updateTodayLog({ protein: (todayLog.protein || 0) + food.p, fats: (todayLog.fats || 0) + food.f, carbs: (todayLog.carbs || 0) + food.c, entries: [newEntry, ...(todayLog.entries || [])] });
+                setIsLogHiddenOpen(false);
+            }} />
+            <Modal {...modalState} onClose={() => setModalState({ ...modalState, isOpen: false })} />
           </div>
         );
       };
-      // <!--- **** END OF MAJOR UPDATE **** --->
 
       const root = ReactDOM.createRoot(document.getElementById("root"));
       root.render(<App />);
