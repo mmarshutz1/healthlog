@@ -116,10 +116,12 @@
       }
 
       .safe-pt {
-        padding-top: calc(env(safe-area-inset-top, 0rem) + 1rem);
+        /* UPDATED: Increased buffer to 2rem to sit cleanly below Dynamic Island */
+        padding-top: calc(env(safe-area-inset-top, 20px) + 2rem);
       }
       .safe-pb {
-        padding-bottom: env(safe-area-inset-bottom, 1rem);
+        /* UPDATED: Ensure nav bar floats above the home indicator */
+        padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 1rem);
       }
 
       /* Animation for modal */
